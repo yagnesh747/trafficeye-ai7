@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TrafficEye AI - Automated Traffic Violation Identification & Classification System using Computer Vision. Hackathon Prototype.">
+    <title>TrafficEye AI - Traffic Violation Detection System</title>
+    <!-- CSS stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- ChartJS library for statistics rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"></path>
+                    </svg>
+                </div>
+                <div class="logo-text">TrafficEye AI</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-tab="dashboard" id="navDashboard">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="9"></rect>
+                        <rect x="14" y="3" width="7" height="5"></rect>
+                        <rect x="14" y="12" width="7" height="9"></rect>
+                        <rect x="3" y="16" width="7" height="5"></rect>
+                    </svg>
+                    <span>Dashboard</span>
+                </div>
+                
+                <div class="nav-item" data-tab="detection" id="navDetection">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span>Detection Center</span>
+                </div>
+                
+                <div class="nav-item" data-tab="simulator" id="navSimulator">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 7l-7 5 7 5V7z"></path>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    <span>Camera Simulator</span>
+                </div>
+                
+                <div class="nav-item" data-tab="presentation" id="navPresentation">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                        <line x1="19" y1="5" x2="19" y2="19"></line>
+                    </svg>
+                    <span>Pitch Presentation</span>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="pulse-dot"></div>
+                <div class="system-status">
+                    <div>AI Engine Status</div>
+                    <div class="system-status-val">Online & Active</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- App Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h1 id="viewTitle">Control Dashboard</h1>
+                    <p id="viewSubtitle">Real-time highway and city violation analytics cockpit.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="time-display" id="currentTime">00:00:00 | 15-JUN-2026</div>
+                </div>
+            </header>
+            
+            <!-- 1. DASHBOARD VIEW -->
+            <section id="dashboard-view" class="tab-view active">
+                
+                <!-- KPI metrics cards -->
+                <div class="kpi-grid">
+                    <div class="glass kpi-card">
+                        <div class="kpi-info">
+                            <h3>Images Processed</h3>
+                            <div class="kpi-value" id="processedCountEl">1,420</div>
+                            <span class="kpi-trend down">⚡ Realtime Analytics</span>
+                        </div>
+                        <div class="kpi-icon-container">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="glass kpi-card severity-high">
+                        <div class="kpi-info">
+                            <h3>Total Violations</h3>
+                            <div class="kpi-value" id="violationCountEl">462</div>
+                            <span class="kpi-trend up">📈 +12% this hour</span>
+                        </div>
+                        <div class="kpi-icon-container">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="glass kpi-card severity-success">
+                        <div class="kpi-info">
+                            <h3>Challan Revenue</h3>
+                            <div class="kpi-value" id="challanRevenueEl">$48,500</div>
+                            <span class="kpi-trend neutral">💵 Auto-invoiced</span>
+                        </div>
+                        <div class="kpi-icon-container">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="glass kpi-card severity-warning">
+                        <div class="kpi-info">
+                            <h3>AI Model Accuracy</h3>
+                            <div class="kpi-value" id="accuracyEl">94.2%</div>
+                            <span class="kpi-trend neutral">🎯 YOLOv8 Core</span>
+                        </div>
+                        <div class="kpi-icon-container">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <circle cx="12" cy="12" r="6"></circle>
+                                <circle cx="12" cy="12" r="2"></circle>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts layout -->
+                <div class="charts-grid">
+                    <div class="glass chart-card">
+                        <div class="chart-header">
+                            <h2>Hourly Violation Trend</h2>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="trendChartEl"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="glass chart-card">
+                        <div class="chart-header">
+                            <h2>Violation Categories</h2>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="violationChartEl"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent violations list table -->
+                <div class="glass table-card">
+                    <div class="table-header">
+                        <h2>Recent Auto-Detected Incidents</h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Challan ID</th>
+                                    <th>Vehicle Number</th>
+                                    <th>Violation Category</th>
+                                    <th>Location</th>
+                                    <th>Fine Amt</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>TX-2026-8812</strong></td>
+                                    <td>MH12-KP-4820</td>
+                                    <td>No Helmet</td>
+                                    <td>Senapati Bapat Road, Zone 3</td>
+                                    <td>$100.00</td>
+                                    <td><span class="badge badge-danger">Unpaid</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>TX-2026-8794</strong></td>
+                                    <td>DL3C-AY-9031</td>
+                                    <td>Triple Riding</td>
+                                    <td>Connaught Place Outer Ring</td>
+                                    <td>$150.00</td>
+                                    <td><span class="badge badge-danger">Unpaid</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>TX-2026-8744</strong></td>
+                                    <td>KA03-MM-7721</td>
+                                    <td>Wrong Parking</td>
+                                    <td>Koramangala 80ft Road</td>
+                                    <td>$100.00</td>
+                                    <td><span class="badge badge-success">Paid</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>TX-2026-8691</strong></td>
+                                    <td>HR26-CN-5512</td>
+                                    <td>Signal Jumping</td>
+                                    <td>IFFCO Chowk, Sector 29</td>
+                                    <td>$250.00</td>
+                                    <td><span class="badge badge-warning">Review</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </section>
+            
+            <!-- 2. DETECTION CENTER VIEW -->
+            <section id="detection-view" class="tab-view">
+                
+                <div class="detection-grid">
+                    
+                    <!-- Main workspace image handler -->
+                    <div class="glass workspace-card">
+                        <div class="workspace-header">
+                            <h2>CV Verification Desk</h2>
+                            <button class="btn-ctrl btn-ctrl-secondary" onclick="resetWorkspace()">Reset Canvas</button>
+                        </div>
+                        
+                        <!-- Upload and Canvas render portal -->
+                        <div class="detection-viewport" id="dragArea">
+                            <div class="upload-placeholder" id="uploadPlaceholder">
+                                <div class="upload-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <h3>Upload Traffic Snapshot</h3>
+                                <p>Drag and drop image here or click to browse files</p>
+                                <button class="btn-upload">Browse Files</button>
+                            </div>
+                            
+                            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                            
+                            <!-- Bounding box overlay canvas -->
+                            <div class="canvas-container" id="canvasContainer">
+                                <div class="scan-line" id="scanLine"></div>
+                                <div class="scanning-overlay-text" id="overlayText">AI ANALYSIS RUNNING...</div>
+                                <canvas id="detectionCanvas"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Sample traffic violating images library -->
+                        <div class="sample-gallery">
+                            <h4>Or Select Sample Scenario</h4>
+                            <div class="sample-list">
+                                <div class="sample-card" data-sample-key="no_helmet">
+                                    <img src="images/samples/no_helmet.png" alt="No Helmet Rider">
+                                    <div class="sample-tag">No Helmet</div>
+                                </div>
+                                <div class="sample-card" data-sample-key="triple_riding">
+                                    <img src="images/samples/triple_riding.png" alt="Triple Riding Scooter">
+                                    <div class="sample-tag">Triple Riding</div>
+                                </div>
+                                <div class="sample-card" data-sample-key="wrong_parking">
+                                    <img src="images/samples/wrong_parking.png" alt="Wrong Parking Car">
+                                    <div class="sample-tag">Wrong Parking</div>
+                                </div>
+                                <div class="sample-card" data-sample-key="signal_jumping">
+                                    <img src="images/samples/signal_jumping.png" alt="Red Light Jumper">
+                                    <div class="sample-tag">Signal Jumping</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Side details panel -->
+                    <div class="details-sidebar">
+                        <div class="glass details-card">
+                            <h3>Detection Report</h3>
+                            
+                            <!-- Empty message -->
+                            <div class="empty-details-msg" id="emptyDetails">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <p>Load a traffic snapshot to view bounding boxes, AI confidence grades, and registration OCR.</p>
+                            </div>
+                            
+                            <!-- Report Details layout -->
+                            <div id="detailsContent" style="display: none; flex-direction: column; flex: 1;">
+                                <h4 id="detailTitle" style="font-size: 1.1rem; color: #fff; margin-bottom: 16px;">Violation Report</h4>
+                                
+                                <div class="violations-list" id="detailViolationsList">
+                                    <!-- Populated dynamically -->
+                                </div>
+                                
+                                <div class="analysis-meta">
+                                    <div class="meta-field">
+                                        <span class="meta-field-label">OCR License Plate</span>
+                                        <span class="meta-field-val" id="detailPlate">-</span>
+                                    </div>
+                                    <div class="meta-field">
+                                        <span class="meta-field-label">Speed Clocked</span>
+                                        <span class="meta-field-val" id="detailSpeed">-</span>
+                                    </div>
+                                    <div class="meta-field" style="grid-column: span 2;">
+                                        <span class="meta-field-label">Location Node</span>
+                                        <span class="meta-field-val" id="detailLocation">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="action-buttons" style="margin-top: auto;">
+                                    <button class="btn btn-primary" id="btnOpenChallan">
+                                        <span>Generate E-Challan</span>
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="resetWorkspace()">
+                                        <span>Discard Image</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </section>
+            
+            <!-- 3. CAMERA SIMULATOR VIEW -->
+            <section id="simulator-view" class="tab-view">
+                
+                <div class="simulator-layout">
+                    
+                    <!-- Simulation video screen area -->
+                    <div class="glass workspace-card simulator-viewport">
+                        <div class="viewport-head">
+                            <div class="viewport-title">
+                                <div class="pulse-dot" id="simPulseDot" style="background-color: var(--text-dark); box-shadow: none;"></div>
+                                <h2 id="simStatusText">Feed Paused</h2>
+                            </div>
+                            <div class="camera-metadata-bar">
+                                <div class="cam-meta-item">Stream: <strong>CAM_FEED_01_SOUTH</strong></div>
+                                <div class="cam-meta-item">FPS: <strong>1.0 FPS (Edge Mode)</strong></div>
+                            </div>
+                        </div>
+                        
+                        <div class="viewport-screen">
+                            <canvas id="simulatorCanvas"></canvas>
+                        </div>
+                        
+                        <div class="viewport-controls">
+                            <div class="control-buttons">
+                                <button class="btn-ctrl btn-ctrl-primary" id="btnToggleSim">
+                                    <svg style="width:18px;height:18px;stroke:#070a13;fill:none;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    <span>Start Camera Feed</span>
+                                </button>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Simulator feeds from compiled mock scenarios sequentially.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Running log logs console -->
+                    <div class="glass simulator-log-card">
+                        <h3>Compliance Control Log</h3>
+                        <div class="log-feed" id="logFeed">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </section>
+            
+            <!-- 4. PRESENTATION PITCH DECK VIEW -->
+            <section id="presentation-view" class="tab-view">
+                
+                <div class="glass deck-card">
+                    <div class="deck-container">
+                        
+                        <!-- Slide 1 -->
+                        <div class="slide active">
+                            <div class="slide-number">Slide 1 / 5</div>
+                            <h2>Automated Traffic Enforcement System</h2>
+                            <p class="slide-content">
+                                Welcome to <strong>TrafficEye AI</strong>, a modern solution using cutting-edge computer vision to identify violations and streamline municipal traffic management.<br><br>
+                                Designed to reduce manual monitoring times by 95% and dispatch instant violation warnings to riders in under 3 seconds.
+                            </p>
+                            <div class="features-grid">
+                                <div class="feature-box">
+                                    <h4>YOLOv8 CV Processing</h4>
+                                    <p>Identifies No Helmet, Triple Riding, Wrong Parking, and Signal Jumping simultaneously.</p>
+                                </div>
+                                <div class="feature-box">
+                                    <h4>Automatic OCR Reader</h4>
+                                    <p>Reads license plates even in low lighting or motion blur conditions with high accuracy.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Slide 2 -->
+                        <div class="slide">
+                            <div class="slide-number">Slide 2 / 5</div>
+                            <h2>The Problem in Modern Cities</h2>
+                            <p class="slide-content">
+                                Over 65% of urban traffic accidents involve motorcycle violations (no helmet, triple riding) or signal evasion. Manually reviewing CCTV video streams is slow, costly, and impossible to scale.
+                            </p>
+                            <div style="margin-top: 30px; display: flex; justify-content: center; gap: 40px;">
+                                <div style="text-align: center;">
+                                    <h3 style="font-size: 2.2rem; color: var(--color-danger); font-family: var(--font-heading);">82%</h3>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted);">Violations go unpenalized due to oversight</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <h3 style="font-size: 2.2rem; color: var(--color-danger); font-family: var(--font-heading);">4-6 Wks</h3>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted);">Average delay to issue physical challans manually</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Slide 3 -->
+                        <div class="slide">
+                            <div class="slide-number">Slide 3 / 5</div>
+                            <h2>Our Core AI Pipeline</h2>
+                            <p class="slide-content">
+                                TrafficEye AI captures images, runs local inference through an optimized model array, extracts the registration details, and automates notifications.
+                            </p>
+                            <div class="tech-diagram">
+                                <div class="tech-node highlighted">
+                                    <span>CCTV Stream</span>
+                                </div>
+                                <div class="tech-arrow active"></div>
+                                <div class="tech-node highlighted">
+                                    <span>YOLOv8 Core</span>
+                                </div>
+                                <div class="tech-arrow active"></div>
+                                <div class="tech-node highlighted">
+                                    <span>Plate OCR</span>
+                                </div>
+                                <div class="tech-arrow active"></div>
+                                <div class="tech-node highlighted">
+                                    <span>SMS Challan</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Slide 4 -->
+                        <div class="slide">
+                            <div class="slide-number">Slide 4 / 5</div>
+                            <h2>Business Impact & Scaling</h2>
+                            <p class="slide-content">
+                                TrafficEye AI integrates into existing highway CCTV infrastructures with zero hardware updates, creating instant revenue channels for local municipalities while increasing traffic compliance.
+                            </p>
+                            <div class="features-grid">
+                                <div class="feature-box">
+                                    <h4>SaaS for Municipalities</h4>
+                                    <p>Low-cost cloud deployment with pricing per active camera node.</p>
+                                </div>
+                                <div class="feature-box">
+                                    <h4>Safer City Streets</h4>
+                                    <p>Studies show immediate enforcement reduces repeat violations by over 78% in 30 days.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slide 5 -->
+                        <div class="slide">
+                            <div class="slide-number">Slide 5 / 5</div>
+                            <h2>Hackathon Technical Stack</h2>
+                            <p class="slide-content">
+                                Built for high portability and rapid demonstration capacity:
+                            </p>
+                            <div style="margin-top: 30px; display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 600px; text-align: left;">
+                                <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <strong style="color: var(--primary);">Frontend Engine</strong><br>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Vanilla JS & Canvas</span>
+                                </div>
+                                <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <strong style="color: var(--primary);">UI Layer</strong><br>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Glassmorphic CSS</span>
+                                </div>
+                                <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <strong style="color: var(--primary);">Charts Engine</strong><br>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Chart.js API</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Presentation controls -->
+                    <div class="deck-nav">
+                        <button class="btn-deck" id="btnPrevSlide">← Previous</button>
+                        <div class="slide-dots">
+                            <div class="dot active"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                        <button class="btn-deck" id="btnNextSlide">Next →</button>
+                    </div>
+                </div>
+                
+            </section>
+            
+        </main>
+        
+    </div>
+    
+    <!-- MODALS: E-Challan Receipt Modal -->
+    <div class="modal-overlay" id="challanModal">
+        <div class="glass modal-content">
+            <button class="close-modal" id="closeModalBtn">&times;</button>
+            
+            <div class="challan-header">
+                <div class="challan-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <h2>OFFICIAL E-CHALLAN RECEIPT</h2>
+                <p>Ministry of Road Transport & Highways</p>
+                <div style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; letter-spacing: 2px;">
+                    ||||||| | ||||| || |||||| | |||
+                </div>
+            </div>
+            
+            <div class="challan-details-list">
+                <div class="challan-row">
+                    <span class="challan-label">Challan Ref No.</span>
+                    <span class="challan-val" id="mChallanNo">TX-2026-00000</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">Scan Timestamp</span>
+                    <span class="challan-val" id="mTimestamp">00/00/0000, 00:00:00</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">License Plate No.</span>
+                    <span class="challan-val" id="mPlateNo">-</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">Registered Owner</span>
+                    <span class="challan-val" id="mOwnerName">-</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">Vehicle Details</span>
+                    <span class="challan-val" id="mVehicleDetails">-</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">Offense Location</span>
+                    <span class="challan-val" id="mOffenseLocation">-</span>
+                </div>
+                <div class="challan-row">
+                    <span class="challan-label">Offenses Flagged</span>
+                    <span class="challan-val" id="mOffenseType">-</span>
+                </div>
+                <div class="challan-row" style="border-top: 1px dashed rgba(255,255,255,0.15); margin-top: 8px; padding-top: 14px;">
+                    <span class="challan-label" style="font-weight: 700; color: white;">TOTAL FINE DUE</span>
+                    <span class="challan-val highlight-danger" id="mFineAmount">$0.00</span>
+                </div>
+            </div>
+            
+            <div class="challan-snapshot">
+                <div class="challan-snapshot-title">Visual Evidence Clip</div>
+                <div class="challan-snapshot-img-wrapper">
+                    <img id="mSnapshotImg" src="images/samples/no_helmet.png" alt="Violation Evidence Snapshot">
+                </div>
+            </div>
+            
+            <div class="challan-footer">
+                <button class="btn btn-primary" id="btnDispatchSMS" style="flex: 1;">
+                    <svg style="width:18px;height:18px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <span>Dispatch SMS Notice</span>
+                </button>
+                <button class="btn btn-secondary" id="btnPayChallan" style="flex: 1;">
+                    <svg style="width:18px;height:18px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                    <span>Settle Challan ($)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- TOAST NOTIFICATIONS popup -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">
+            <svg style="width:24px;height:24px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+        <div class="toast-content">
+            <h4 id="toastTitle">Success</h4>
+            <p id="toastBody">Action executed successfully.</p>
+        </div>
+    </div>
+    
+    <!-- Application Logic -->
+    <script src="js/app.js"></script>
+</body>
+</html>
