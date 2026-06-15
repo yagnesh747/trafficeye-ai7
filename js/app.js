@@ -19,13 +19,13 @@ const sampleDetections = {
                 severity: "high",
                 fine: 100,
                 // percentage coordinates x, y, width, height
-                box: { x: 35, y: 30, w: 30, h: 60 }
+                box: { x: 29, y: 32, w: 37, h: 56 }
             },
             {
                 label: "License Plate",
                 confidence: 0.92,
                 severity: "none",
-                box: { x: 47, y: 79.5, w: 6, h: 3 }
+                box: { x: 33, y: 70, w: 8, h: 5 }
             }
         ]
     },
@@ -45,13 +45,13 @@ const sampleDetections = {
                 confidence: 0.96,
                 severity: "high",
                 fine: 150,
-                box: { x: 30, y: 20, w: 40, h: 70 }
+                box: { x: 36, y: 39, w: 33, h: 44 }
             },
             {
                 label: "License Plate",
                 confidence: 0.95,
                 severity: "none",
-                box: { x: 49, y: 81, w: 6, h: 3 }
+                box: { x: 39, y: 69, w: 4, h: 3 }
             }
         ]
     },
@@ -71,13 +71,13 @@ const sampleDetections = {
                 confidence: 0.98,
                 severity: "medium",
                 fine: 100,
-                box: { x: 20, y: 35, w: 55, h: 45 }
+                box: { x: 17, y: 43, w: 47, h: 35 }
             },
             {
                 label: "License Plate",
                 confidence: 0.94,
                 severity: "none",
-                box: { x: 51, y: 63, w: 6, h: 3 }
+                box: { x: 32, y: 61, w: 7, h: 3 }
             }
         ]
     },
@@ -97,19 +97,19 @@ const sampleDetections = {
                 confidence: 0.97,
                 severity: "high",
                 fine: 250,
-                box: { x: 25, y: 40, w: 45, h: 40 }
+                box: { x: 18, y: 51, w: 48, h: 22 }
             },
             {
                 label: "Traffic Signal",
                 confidence: 0.99,
                 severity: "none",
-                box: { x: 68, y: 10, w: 8, h: 22 }
+                box: { x: 38, y: 9, w: 9, h: 11 }
             },
             {
                 label: "License Plate",
                 confidence: 0.96,
                 severity: "none",
-                box: { x: 44, y: 69, w: 6, h: 3 }
+                box: { x: 60, y: 65, w: 4, h: 2.5 }
             }
         ]
     }
