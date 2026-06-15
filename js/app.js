@@ -25,7 +25,7 @@ const sampleDetections = {
                 label: "License Plate",
                 confidence: 0.92,
                 severity: "none",
-                box: { x: 46, y: 78, w: 8, h: 6 }
+                box: { x: 47, y: 79.5, w: 6, h: 3 }
             }
         ]
     },
@@ -51,7 +51,7 @@ const sampleDetections = {
                 label: "License Plate",
                 confidence: 0.95,
                 severity: "none",
-                box: { x: 48, y: 80, w: 8, h: 5 }
+                box: { x: 49, y: 81, w: 6, h: 3 }
             }
         ]
     },
@@ -77,7 +77,7 @@ const sampleDetections = {
                 label: "License Plate",
                 confidence: 0.94,
                 severity: "none",
-                box: { x: 50, y: 62, w: 8, h: 5 }
+                box: { x: 51, y: 63, w: 6, h: 3 }
             }
         ]
     },
@@ -109,7 +109,7 @@ const sampleDetections = {
                 label: "License Plate",
                 confidence: 0.96,
                 severity: "none",
-                box: { x: 43, y: 68, w: 8, h: 5 }
+                box: { x: 44, y: 69, w: 6, h: 3 }
             }
         ]
     }
@@ -593,9 +593,11 @@ function drawDetections(img, data) {
         const w = (box.w / 100) * canvas.width;
         const h = (box.h / 100) * canvas.height;
         
-        // Choose color based on severity
+        // Choose color based on label/severity
         let color = '#2563eb'; // Enterprise Blue (Safe / Plate)
-        if (v.severity === 'high') {
+        if (v.label === 'License Plate') {
+            color = '#8b5cf6'; // Enterprise Violet (OCR / License Plate)
+        } else if (v.severity === 'high') {
             color = '#dc2626'; // Enterprise Red (High severity)
         } else if (v.severity === 'medium') {
             color = '#f59e0b'; // Enterprise Amber (Medium severity)
@@ -612,7 +614,10 @@ function drawDetections(img, data) {
         const fontSize = Math.max(9, Math.round(canvas.width / 50));
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         
-        const labelText = `${v.label} (${Math.round(v.confidence * 100)}%)`;
+        let labelText = `${v.label} (${Math.round(v.confidence * 100)}%)`;
+        if (v.label === 'License Plate' && data.plate && data.plate !== '-') {
+            labelText = `License Plate: ${data.plate} (${Math.round(v.confidence * 100)}%)`;
+        }
         const textWidth = ctx.measureText(labelText).width;
         
         // Draw tag background
@@ -710,7 +715,7 @@ function populateDetails(data) {
                 </div>
                 <div class="violation-score-container" style="flex: 1; max-width: 120px; margin-left: 16px; display: flex; flex-direction: column; align-items: stretch;">
                     <div class="violation-score-bar-wrapper" style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                        <div class="violation-score-bar" style="width: ${pct}%; height: 100%; background: ${v.severity === 'high' ? 'var(--color-danger)' : v.severity === 'medium' ? 'var(--color-warning)' : 'var(--primary)'}; border-radius: 3px;"></div>
+                        <div class="violation-score-bar" style="width: ${pct}%; height: 100%; background: ${v.label === 'License Plate' ? '#8b5cf6' : v.severity === 'high' ? 'var(--color-danger)' : v.severity === 'medium' ? 'var(--color-warning)' : 'var(--primary)'}; border-radius: 3px;"></div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted);">
                         <span>Conf.</span>
@@ -814,7 +819,7 @@ function generateCustomMockDetection(filename) {
                 label: "License Plate",
                 confidence: 0.95,
                 severity: "none",
-                box: { x: 45, y: 65, w: 10, h: 6 }
+                box: { x: 47, y: 66.5, w: 6, h: 3 }
             }
         ];
     } else if (violationRnd < 0.7) { // No Helmet
@@ -832,7 +837,7 @@ function generateCustomMockDetection(filename) {
                 label: "License Plate",
                 confidence: 0.93,
                 severity: "none",
-                box: { x: 46, y: 72, w: 8, h: 5 }
+                box: { x: 47, y: 73, w: 6, h: 3 }
             }
         ];
     } else { // Generic Clean Vehicle
@@ -856,7 +861,7 @@ function generateCustomMockDetection(filename) {
                 label: "License Plate",
                 confidence: 0.98,
                 severity: "none",
-                box: { x: 45, y: 65, w: 10, h: 6 }
+                box: { x: 47, y: 66.5, w: 6, h: 3 }
             }
         ];
     }
@@ -1077,7 +1082,9 @@ function runSimulationStep() {
             const h = (box.h / 100) * canvas.height;
             
             let color = '#059669'; // Enterprise Green (Safe / Compliance)
-            if (v.severity === 'high') {
+            if (v.label === 'License Plate') {
+                color = '#8b5cf6'; // Enterprise Violet (OCR / License Plate)
+            } else if (v.severity === 'high') {
                 color = '#dc2626'; // Enterprise Red (High severity)
             } else if (v.severity === 'medium') {
                 color = '#f59e0b'; // Enterprise Amber (Medium severity)
@@ -1092,7 +1099,10 @@ function runSimulationStep() {
             const fontSize = Math.max(10, Math.round(canvas.width / 45));
             ctx.font = `bold ${fontSize}px Inter, sans-serif`;
             
-            const tagStr = `${v.label}`;
+            let tagStr = `${v.label}`;
+            if (v.label === 'License Plate' && data.plate && data.plate !== '-') {
+                tagStr = `Plate: ${data.plate}`;
+            }
             const labelWidth = ctx.measureText(tagStr).width;
             ctx.fillRect(x - ctx.lineWidth/2, y - fontSize - 5, labelWidth + 10, fontSize + 5);
             
