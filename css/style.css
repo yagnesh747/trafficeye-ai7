@@ -1522,6 +1522,104 @@ body {
     }
 }
 
+/* Detection Center Realism Enhancements */
+.inference-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.inference-badge.badge-confirmed {
+    background: var(--secondary-light);
+    color: var(--secondary);
+    border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.inference-badge.badge-unrelated {
+    background: var(--color-warning-glow);
+    color: var(--color-warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.badge-confirmed .badge-dot {
+    background-color: var(--secondary);
+}
+
+.badge-unrelated .badge-dot {
+    background-color: var(--color-warning);
+}
+
+.threshold-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    outline: none;
+    transition: background 0.15s ease;
+}
+
+.threshold-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.1s ease;
+}
+
+.threshold-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.threshold-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.1s ease;
+}
+
+.threshold-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+.alert-banner {
+    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.violation-detail-item {
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.violation-detail-item:hover {
+    transform: translateX(3px);
+}
+
+.violation-severity.safe {
+    color: var(--secondary);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 1024px) {
     .charts-grid {

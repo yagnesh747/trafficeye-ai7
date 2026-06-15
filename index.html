@@ -290,7 +290,7 @@
                     
                     <!-- Side details panel -->
                     <div class="details-sidebar">
-                        <div class="glass details-card">
+                        <div class="glass details-card" style="position: relative; padding-bottom: 48px;">
                             <h3>Detection Report</h3>
                             
                             <!-- Empty message -->
@@ -305,7 +305,41 @@
                             
                             <!-- Report Details layout -->
                             <div id="detailsContent" style="display: none; flex-direction: column; flex: 1;">
-                                <h4 id="detailTitle" style="font-size: 1.1rem; color: #fff; margin-bottom: 16px;">Violation Report</h4>
+                                <h4 id="detailTitle" style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 12px; font-weight: 700;">Violation Report</h4>
+                                
+                                <!-- Inference Dashboard (Status and Slider) -->
+                                <div class="inference-dashboard" style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px;">
+                                    <div class="inference-status-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <div id="inferenceStatusBadge" class="inference-badge badge-confirmed">
+                                            <span class="badge-dot"></span>
+                                            <span id="inferenceStatusText">TRAFFIC SCENE CONFIRMED</span>
+                                        </div>
+                                        <div class="inference-device-info" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">YOLOv8 Edge</div>
+                                    </div>
+                                    
+                                    <div class="confidence-threshold-control">
+                                        <div class="threshold-header" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">
+                                            <span>Min Confidence:</span>
+                                            <strong id="thresholdValue" style="color: var(--primary); font-size: 0.8rem;">65%</strong>
+                                        </div>
+                                        <input type="range" id="confidenceSlider" min="50" max="95" value="65" class="threshold-slider" style="width: 100%; cursor: pointer;">
+                                    </div>
+                                </div>
+
+                                <!-- Non-Traffic Alert Banner -->
+                                <div id="nonTrafficAlert" class="alert-banner alert-warning" style="display: none; margin-bottom: 16px; padding: 12px; border-radius: 6px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); display: none; gap: 10px;">
+                                    <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2" style="width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px;">
+                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                        </svg>
+                                        <div>
+                                            <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">No traffic-related objects detected.</h4>
+                                            <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">Unrelated scene. No recognizable vehicles, license plates, or traffic signals were found.</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 
                                 <div class="violations-list" id="detailViolationsList">
                                     <!-- Populated dynamically -->
@@ -334,6 +368,11 @@
                                         <span>Discard Image</span>
                                     </button>
                                 </div>
+                            </div>
+                            
+                            <!-- Prototype Disclaimer -->
+                            <div class="detection-disclaimer" style="position: absolute; bottom: 12px; left: 20px; right: 20px; font-size: 0.7rem; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border-color); padding-top: 8px; font-weight: 500;">
+                                Prototype demonstration using simulated computer vision outputs.
                             </div>
                         </div>
                     </div>

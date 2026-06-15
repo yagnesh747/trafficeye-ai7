@@ -13,18 +13,13 @@ const sampleDetections = {
         ownerPhone: "+91 98765 43210",
         violations: [
             {
-                label: "Rider (No Helmet)",
+                label: "Bike",
+                offense: "No Helmet Rider",
                 confidence: 0.94,
                 severity: "high",
                 fine: 100,
                 // percentage coordinates x, y, width, height
                 box: { x: 35, y: 30, w: 30, h: 60 }
-            },
-            {
-                label: "Exposed Head",
-                confidence: 0.97,
-                severity: "high",
-                box: { x: 45, y: 22, w: 10, h: 12 }
             },
             {
                 label: "License Plate",
@@ -45,29 +40,12 @@ const sampleDetections = {
         ownerPhone: "+91 87654 32109",
         violations: [
             {
-                label: "Triple Riding Group",
+                label: "Bike",
+                offense: "Triple Riding",
                 confidence: 0.96,
                 severity: "high",
                 fine: 150,
                 box: { x: 30, y: 20, w: 40, h: 70 }
-            },
-            {
-                label: "Driver (No Helmet)",
-                confidence: 0.89,
-                severity: "high",
-                box: { x: 42, y: 22, w: 14, h: 20 }
-            },
-            {
-                label: "Pillion 1 (No Helmet)",
-                confidence: 0.91,
-                severity: "high",
-                box: { x: 48, y: 26, w: 12, h: 18 }
-            },
-            {
-                label: "Pillion 2 (No Helmet)",
-                confidence: 0.87,
-                severity: "high",
-                box: { x: 54, y: 30, w: 12, h: 18 }
             },
             {
                 label: "License Plate",
@@ -88,23 +66,12 @@ const sampleDetections = {
         ownerPhone: "+91 76543 21098",
         violations: [
             {
-                label: "Car (Wrong Parking)",
+                label: "Car",
+                offense: "Wrong Parking Violation",
                 confidence: 0.98,
                 severity: "medium",
                 fine: 100,
                 box: { x: 20, y: 35, w: 55, h: 45 }
-            },
-            {
-                label: "Red Zone Violation",
-                confidence: 0.91,
-                severity: "medium",
-                box: { x: 10, y: 70, w: 75, h: 15 }
-            },
-            {
-                label: "No Parking Sign",
-                confidence: 0.99,
-                severity: "none",
-                box: { x: 75, y: 15, w: 12, h: 25 }
             },
             {
                 label: "License Plate",
@@ -125,23 +92,18 @@ const sampleDetections = {
         ownerPhone: "+91 99999 88888",
         violations: [
             {
-                label: "Car (Signal Violation)",
+                label: "Car",
+                offense: "Red Light Violation",
                 confidence: 0.97,
                 severity: "high",
                 fine: 250,
                 box: { x: 25, y: 40, w: 45, h: 40 }
             },
             {
-                label: "Red Signal (Active)",
+                label: "Traffic Signal",
                 confidence: 0.99,
-                severity: "high",
+                severity: "none",
                 box: { x: 68, y: 10, w: 8, h: 22 }
-            },
-            {
-                label: "Stop Line Infringement",
-                confidence: 0.93,
-                severity: "high",
-                box: { x: 15, y: 72, w: 65, h: 12 }
             },
             {
                 label: "License Plate",
@@ -160,6 +122,9 @@ const state = {
     uploadedImageSrc: null,
     uploadedImageName: null,
     isScanning: false,
+    confidenceThreshold: 0.65, // Default confidence threshold (65%)
+    currentImage: null,        // Reference to the active loaded HTMLImageElement
+    currentDetectionData: null,// Reference to active loaded detection metadata
     dashboardStats: {
         processedCount: 1420,
         violationCount: 462,
@@ -190,11 +155,30 @@ document.addEventListener('DOMContentLoaded', () => {
     initSimulator();
     initPresentation();
     initModal();
+    initConfidenceSlider();
     
     // Set active tab to dashboard
     switchTab('dashboard');
     updateDashboardUI();
 });
+
+function initConfidenceSlider() {
+    const slider = document.getElementById('confidenceSlider');
+    const valDisplay = document.getElementById('thresholdValue');
+    if (slider && valDisplay) {
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            valDisplay.textContent = `${val}%`;
+            state.confidenceThreshold = val / 100;
+            
+            // Re-render detections if we have loaded an active image
+            if (state.currentImage && state.currentDetectionData) {
+                drawDetections(state.currentImage, state.currentDetectionData);
+                populateDetails(state.currentDetectionData);
+            }
+        });
+    }
+}
 
 // 1. Navigation Logic
 function initNavigation() {
@@ -474,6 +458,13 @@ function initSamples() {
 }
 
 // 6. Computer Vision Scanning Simulation & Canvas Rendering
+function isTrafficImage(filename) {
+    if (!filename) return true; // fallback
+    const keywords = ['car', 'bike', 'truck', 'traffic', 'road', 'street', 'highway', 'vehicle', 'plate', 'signal', 'helmet', 'riding', 'parking', 'violation', 'speed', 'accident', 'motorcycle', 'scooter', 'intersection', 'junction', 'lane', 'crossing'];
+    const lowerName = filename.toLowerCase();
+    return keywords.some(kw => lowerName.includes(kw));
+}
+
 function runInference(imgSource, isCustomUpload) {
     if (state.isScanning) return;
     
@@ -539,21 +530,31 @@ function runInference(imgSource, isCustomUpload) {
             // Get detection metadata
             let detectionData;
             if (isCustomUpload) {
-                // Generate a smart mock violation for any uploaded image!
-                detectionData = generateCustomMockDetection();
+                // Generate a smart mock violation/detection based on filename keywords
+                detectionData = generateCustomMockDetection(state.uploadedImageName);
             } else {
                 detectionData = sampleDetections[state.activeDetectionKey];
             }
+            
+            // Save global state references for threshold filtering redrawing
+            state.currentImage = img;
+            state.currentDetectionData = detectionData;
             
             // Draw boxes and populate UI
             drawDetections(img, detectionData);
             populateDetails(detectionData);
             
-            // Increment statistics on violation count
-            const hasViolations = detectionData.violations.some(v => v.severity !== 'none');
-            if (hasViolations) {
-                state.dashboardStats.violationCount++;
-                updateChartsWithNewViolation(detectionData);
+            // Increment statistics on violation count (only if detections exist and pass confidence threshold)
+            if (!detectionData.isNonTraffic) {
+                const threshold = state.confidenceThreshold || 0.65;
+                const hasViolations = detectionData.violations
+                    .filter(v => v.confidence >= threshold)
+                    .some(v => v.severity !== 'none');
+                
+                if (hasViolations) {
+                    state.dashboardStats.violationCount++;
+                    updateChartsWithNewViolation(detectionData);
+                }
             }
             updateDashboardUI();
             
@@ -576,8 +577,14 @@ function drawDetections(img, data) {
     // Redraw base image first
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     
+    if (data.isNonTraffic) return;
+    
+    // Filter violations by confidence threshold
+    const threshold = state.confidenceThreshold || 0.65;
+    const filteredDetections = data.violations.filter(v => v.confidence >= threshold);
+    
     // Loop through violations and draw box
-    data.violations.forEach(v => {
+    filteredDetections.forEach(v => {
         const box = v.box;
         
         // Calculate coordinates relative to canvas size
@@ -626,6 +633,39 @@ function populateDetails(data) {
     const speedEl = document.getElementById('detailSpeed');
     const plateEl = document.getElementById('detailPlate');
     
+    const statusTextEl = document.getElementById('inferenceStatusText');
+    const statusBadgeEl = document.getElementById('inferenceStatusBadge');
+    const nonTrafficAlertEl = document.getElementById('nonTrafficAlert');
+    
+    if (data.isNonTraffic) {
+        titleEl.textContent = "No Traffic Scene Detected";
+        locationEl.textContent = "-";
+        speedEl.textContent = "-";
+        plateEl.textContent = "-";
+        listEl.innerHTML = '';
+        
+        // Update status badge to unrelated
+        statusTextEl.textContent = "NON-TRAFFIC SCENE DETECTED";
+        statusBadgeEl.className = "inference-badge badge-unrelated";
+        
+        // Display warning panel
+        nonTrafficAlertEl.style.display = 'flex';
+        
+        // Hide Challan action
+        document.getElementById('btnOpenChallan').style.display = 'none';
+        
+        emptyDetails.style.display = 'none';
+        detailsContent.style.display = 'flex';
+        return;
+    }
+    
+    // Hide warning panel for traffic images
+    nonTrafficAlertEl.style.display = 'none';
+    
+    // Update status badge to confirmed
+    statusTextEl.textContent = "TRAFFIC SCENE CONFIRMED";
+    statusBadgeEl.className = "inference-badge badge-confirmed";
+    
     titleEl.textContent = data.title;
     locationEl.textContent = data.location;
     speedEl.textContent = data.speed;
@@ -634,26 +674,53 @@ function populateDetails(data) {
     // Build violation items
     listEl.innerHTML = '';
     
+    // Filter violations by confidence threshold
+    const threshold = state.confidenceThreshold || 0.65;
+    const filteredDetections = data.violations.filter(v => v.confidence >= threshold);
+    
     let fineSum = 0;
-    data.violations.forEach(v => {
-        if (v.severity === 'none') return; // Hide non-violations like clean plates or signs
-        
-        fineSum += v.fine || 0;
-        
-        const item = document.createElement('div');
-        item.className = 'violation-detail-item';
-        item.innerHTML = `
-            <div class="violation-type-label">
-                <span class="violation-name">${v.label}</span>
-                <span class="violation-severity ${v.severity}">${v.severity.toUpperCase()} SEVERITY</span>
-            </div>
-            <div class="violation-score-box">
-                <span class="violation-score-label">Confidence</span>
-                <div class="violation-score-val">${Math.round(v.confidence * 100)}%</div>
+    
+    if (filteredDetections.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-details-msg" style="padding: 20px 0; border: 1px dashed var(--border-color); border-radius: 6px; margin-bottom: 16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 28px; height: 28px; margin-bottom: 8px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <p style="font-size: 0.75rem;">No detections above confidence threshold (${Math.round(threshold * 100)}%).</p>
             </div>
         `;
-        listEl.appendChild(item);
-    });
+    } else {
+        filteredDetections.forEach(v => {
+            const isViolation = v.severity !== 'none';
+            if (isViolation) {
+                fineSum += v.fine || 0;
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'violation-detail-item';
+            
+            const pct = Math.round(v.confidence * 100);
+            
+            item.innerHTML = `
+                <div class="violation-type-label">
+                    <span class="violation-name">${v.label}</span>
+                    <span class="violation-severity ${v.severity}">${v.severity.toUpperCase()} SEVERITY ${isViolation ? `(${v.offense})` : ''}</span>
+                </div>
+                <div class="violation-score-container" style="flex: 1; max-width: 120px; margin-left: 16px; display: flex; flex-direction: column; align-items: stretch;">
+                    <div class="violation-score-bar-wrapper" style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                        <div class="violation-score-bar" style="width: ${pct}%; height: 100%; background: ${v.severity === 'high' ? 'var(--color-danger)' : v.severity === 'medium' ? 'var(--color-warning)' : 'var(--primary)'}; border-radius: 3px;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted);">
+                        <span>Conf.</span>
+                        <strong>${pct}%</strong>
+                    </div>
+                </div>
+            `;
+            listEl.appendChild(item);
+        });
+    }
     
     // Enable/Disable Challan Button
     const challanBtn = document.getElementById('btnOpenChallan');
@@ -685,6 +752,17 @@ function resetWorkspace() {
     state.uploadedImageSrc = null;
     state.uploadedImageName = null;
     state.activeDetectionKey = null;
+    state.currentImage = null;
+    state.currentDetectionData = null;
+    
+    // Reset slider in UI
+    const slider = document.getElementById('confidenceSlider');
+    const valDisplay = document.getElementById('thresholdValue');
+    if (slider && valDisplay) {
+        slider.value = 65;
+        valDisplay.textContent = '65%';
+        state.confidenceThreshold = 0.65;
+    }
     
     // Clear custom file input value so same file can be uploaded again
     document.getElementById('fileInput').value = '';
@@ -692,7 +770,23 @@ function resetWorkspace() {
 }
 
 // Generate randomized detection parameters for manual custom file upload
-function generateCustomMockDetection() {
+function generateCustomMockDetection(filename) {
+    const isTraffic = isTrafficImage(filename);
+    
+    if (!isTraffic) {
+        return {
+            title: "Non-Traffic Scene Detected",
+            isNonTraffic: true,
+            plate: "-",
+            vehicle: "-",
+            location: "Unknown Location",
+            speed: "-",
+            owner: "-",
+            ownerPhone: "",
+            violations: []
+        };
+    }
+    
     const plates = ["DL4S-CQ-1084", "MH14-DA-7788", "HR26-ED-2245", "UP16-AM-4491", "KA51-NB-1090"];
     const randomPlate = plates[Math.floor(Math.random() * plates.length)];
     const locations = ["High Street Intersection", "MG Road Traffic Post 07", "Ring Road Flyover Entrance", "Sector 62 Crossing"];
@@ -709,7 +803,8 @@ function generateCustomMockDetection() {
         title = "Speed Limit Infringement";
         violations = [
             {
-                label: `Overspeeding (${randomSpeedVal}km/h)`,
+                label: "Car",
+                offense: `Overspeeding (${randomSpeedVal}km/h)`,
                 confidence: 0.91,
                 severity: "high",
                 fine: 150,
@@ -726,17 +821,12 @@ function generateCustomMockDetection() {
         title = "No Helmet Flagged";
         violations = [
             {
-                label: "Rider (No Helmet)",
+                label: "Bike",
+                offense: "No Helmet Rider",
                 confidence: 0.88,
                 severity: "high",
                 fine: 100,
                 box: { x: 30, y: 15, w: 40, h: 70 }
-            },
-            {
-                label: "Exposed Head",
-                confidence: 0.85,
-                severity: "high",
-                box: { x: 45, y: 15, w: 10, h: 14 }
             },
             {
                 label: "License Plate",
@@ -749,11 +839,18 @@ function generateCustomMockDetection() {
         title = "Vehicle Verification Scan";
         violations = [
             {
-                label: "Safe Vehicle Detected",
+                label: "Car",
+                offense: "Safe Vehicle",
                 confidence: 0.96,
                 severity: "none",
                 fine: 0,
                 box: { x: 15, y: 25, w: 70, h: 55 }
+            },
+            {
+                label: "Traffic Signal",
+                confidence: 0.92,
+                severity: "none",
+                box: { x: 75, y: 10, w: 8, h: 22 }
             },
             {
                 label: "License Plate",
@@ -781,18 +878,19 @@ function updateChartsWithNewViolation(data) {
     if (!violationChart || !trendChart) return;
     
     // 1. Update Breakdown chart values
-    // Find the core violation name
+    // Find the core violation name using label and offense mapping
     data.violations.forEach(v => {
         if (v.severity === 'none') return;
         
         let labelIndex = -1;
-        if (v.label.includes("Helmet") || v.label.includes("Head")) {
+        const targetText = (v.label + ' ' + (v.offense || '')).toLowerCase();
+        if (targetText.includes("helmet") || targetText.includes("head")) {
             labelIndex = 0; // No Helmet
-        } else if (v.label.includes("Triple")) {
+        } else if (targetText.includes("triple") || targetText.includes("riding")) {
             labelIndex = 1; // Triple Riding
-        } else if (v.label.includes("Parking") || v.label.includes("Curb")) {
+        } else if (targetText.includes("parking") || targetText.includes("curb")) {
             labelIndex = 2; // Wrong Parking
-        } else if (v.label.includes("Signal") || v.label.includes("Crossing") || v.label.includes("Red")) {
+        } else if (targetText.includes("signal") || targetText.includes("crossing") || targetText.includes("red") || targetText.includes("light")) {
             labelIndex = 3; // Signal Jumping
         }
         
@@ -850,7 +948,7 @@ function openChallanModal(data, totalFine) {
     // List core violations
     const violationsNames = data.violations
         .filter(v => v.severity !== 'none')
-        .map(v => v.label)
+        .map(v => v.offense || v.label)
         .join(', ');
     document.getElementById('mOffenseType').textContent = violationsNames;
     document.getElementById('mFineAmount').textContent = `$${totalFine}`;
