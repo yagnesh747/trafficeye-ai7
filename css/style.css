@@ -1,25 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --bg-dark: #f8fafc; /* Light Slate-50 background */
+    --bg-dark: #F5F7FA; /* Light Slate-50 background */
     --bg-sidebar: #0f172a; /* Slate Navy sidebar */
     --bg-card: #ffffff; /* Solid White cards */
     --bg-card-hover: #ffffff;
-    --border-color: #e2e8f0; /* Soft Slate-200 borders */
-    --border-hover: #cbd5e1; /* Slate-300 borders */
+    --border-color: #cbd5e1; /* Slate-200 borders */
+    --border-hover: #94a3b8; /* Slate-300 borders */
     
-    --primary: #2563eb; /* Royal Blue */
-    --primary-light: rgba(37, 99, 235, 0.08);
-    --secondary: #059669; /* Emerald Green */
-    --secondary-light: rgba(5, 150, 105, 0.08);
+    --primary: #1E40AF; /* Royal Blue */
+    --primary-light: rgba(30, 64, 175, 0.08);
+    --secondary: #15803D; /* Emerald Green */
+    --secondary-light: rgba(21, 128, 61, 0.08);
     
-    --color-danger: #dc2626; /* Crimson Red */
-    --color-danger-glow: rgba(220, 38, 38, 0.08);
-    --color-warning: #f59e0b; /* Amber */
-    --color-warning-glow: rgba(245, 158, 11, 0.08);
-    --color-success: #059669; /* Emerald Green (success/plate) */
-    --color-success-glow: rgba(5, 150, 105, 0.08);
-    --color-info: #3b82f6; /* Blue info */
+    --color-danger: #B91C1C; /* Crimson Red */
+    --color-danger-glow: rgba(185, 28, 28, 0.08);
+    --color-warning: #D97706; /* Amber */
+    --color-warning-glow: rgba(217, 119, 6, 0.08);
+    --color-success: #15803D; /* Emerald Green (success/plate) */
+    --color-success-glow: rgba(21, 128, 61, 0.08);
+    --color-info: #1E40AF; /* Blue info */
     
     --text-main: #0f172a; /* Dark slate text */
     --text-muted: #475569; /* Slate-600 metadata */
@@ -28,12 +28,12 @@
     --font-heading: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
     
-    --transition-speed: 0.2s;
-    --border-radius: 12px;
+    --transition-speed: 0.15s;
+    --border-radius: 8px;
     --sidebar-width: 260px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -618,14 +618,14 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-/* Scanner Laser Line effect - thin enterprise line overlay */
+/* Scanner overlay line - thin municipal scan overlay */
 .scan-line {
     position: absolute;
     left: 0;
     width: 100%;
     height: 2px;
     background: var(--primary);
-    box-shadow: 0 0 8px var(--primary);
+    opacity: 0.7;
     display: none;
     z-index: 5;
     pointer-events: none;

@@ -1,55 +1,57 @@
 // TrafficEye AI - Core JavaScript Logic
 
+// TrafficEye BTP - Core JavaScript Logic
+
 // Database of mock detections for sample traffic images
 const sampleDetections = {
     no_helmet: {
-        title: "No Helmet Detection",
+        title: "No Helmet Rider Detection",
         imagePath: "images/samples/no_helmet.png",
-        plate: "MH12-KP-4820",
-        vehicle: "Scooter (Suzuki Access - Black)",
-        location: "Senapati Bapat Road, Zone 3",
+        plate: "KA-03-MQ-4820",
+        vehicle: "Suzuki Access 125 (Black)",
+        location: "Koramangala 80 Ft Road",
         speed: "34 km/h",
         owner: "Rahul A. Sharma",
         ownerPhone: "+91 98765 43210",
         violations: [
             {
-                label: "Bike",
+                label: "Two-Wheeler",
                 offense: "No Helmet Rider",
-                confidence: 0.94,
+                confidence: 0.92,
                 severity: "high",
-                fine: 100,
+                fine: 500,
                 // percentage coordinates x, y, width, height
                 box: { x: 29, y: 32, w: 37, h: 56 }
             },
             {
                 label: "License Plate",
-                confidence: 0.92,
+                confidence: 0.88,
                 severity: "none",
                 box: { x: 33, y: 70, w: 8, h: 5 }
             }
         ]
     },
     triple_riding: {
-        title: "Triple Riding Violation",
+        title: "Triple Riding Infraction",
         imagePath: "images/samples/triple_riding.png",
-        plate: "DL3C-AY-9031",
-        vehicle: "Scooter (Honda Activa - Grey)",
-        location: "Connaught Place Outer Ring",
+        plate: "KA-01-AB-9031",
+        vehicle: "Honda Activa 6G (Grey)",
+        location: "Silk Board Junction",
         speed: "28 km/h",
         owner: "Vikram Singh",
         ownerPhone: "+91 87654 32109",
         violations: [
             {
-                label: "Bike",
+                label: "Two-Wheeler",
                 offense: "Triple Riding",
-                confidence: 0.96,
+                confidence: 0.89,
                 severity: "high",
-                fine: 150,
+                fine: 1000,
                 box: { x: 36, y: 39, w: 33, h: 44 }
             },
             {
                 label: "License Plate",
-                confidence: 0.95,
+                confidence: 0.79,
                 severity: "none",
                 box: { x: 39, y: 69, w: 4, h: 3 }
             }
@@ -58,56 +60,56 @@ const sampleDetections = {
     wrong_parking: {
         title: "Wrong Parking Violation",
         imagePath: "images/samples/wrong_parking.png",
-        plate: "KA03-MM-7721",
-        vehicle: "Sedan (Hyundai Verna - White)",
-        location: "Koramangala 80ft Road",
+        plate: "KA-03-MM-7721",
+        vehicle: "Hyundai Verna (White)",
+        location: "MG Road",
         speed: "0 km/h (Stationary)",
         owner: "Anita K. Rangan",
         ownerPhone: "+91 76543 21098",
         violations: [
             {
-                label: "Car",
-                offense: "Wrong Parking Violation",
-                confidence: 0.98,
+                label: "Four-Wheeler",
+                offense: "No Parking Zone",
+                confidence: 0.91,
                 severity: "medium",
-                fine: 100,
+                fine: 500,
                 box: { x: 17, y: 43, w: 47, h: 35 }
             },
             {
                 label: "License Plate",
-                confidence: 0.94,
+                confidence: 0.84,
                 severity: "none",
                 box: { x: 32, y: 61, w: 7, h: 3 }
             }
         ]
     },
     signal_jumping: {
-        title: "Red Light Infringement",
+        title: "Signal Jumping Evaded",
         imagePath: "images/samples/signal_jumping.png",
-        plate: "HR26-CN-5512",
-        vehicle: "Hatchback (Maruti Swift - Red)",
-        location: "IFFCO Chowk, Sector 29",
+        plate: "KA-05-ND-5512",
+        vehicle: "Maruti Suzuki Swift (Red)",
+        location: "Marathahalli Bridge",
         speed: "58 km/h",
         owner: "Devender Yadav",
         ownerPhone: "+91 99999 88888",
         violations: [
             {
-                label: "Car",
+                label: "Four-Wheeler",
                 offense: "Red Light Violation",
-                confidence: 0.97,
+                confidence: 0.90,
                 severity: "high",
-                fine: 250,
+                fine: 1000,
                 box: { x: 18, y: 51, w: 48, h: 22 }
             },
             {
                 label: "Traffic Signal",
-                confidence: 0.99,
+                confidence: 0.94,
                 severity: "none",
                 box: { x: 38, y: 9, w: 9, h: 11 }
             },
             {
                 label: "License Plate",
-                confidence: 0.96,
+                confidence: 0.81,
                 severity: "none",
                 box: { x: 60, y: 65, w: 4, h: 2.5 }
             }
@@ -126,19 +128,61 @@ const state = {
     currentImage: null,        // Reference to the active loaded HTMLImageElement
     currentDetectionData: null,// Reference to active loaded detection metadata
     dashboardStats: {
-        processedCount: 1420,
-        violationCount: 462,
-        challanRevenue: 48500, // in dollars or local currency units
-        accuracy: 94.2
+        violationsDetectedToday: 142,
+        activeCases: 48,
+        generatedChallans: 94,
+        avgConfidence: 84.6
     },
-    sim: {
-        isRunning: false,
-        intervalId: null,
-        currentFrameIndex: 0,
-        cameraLogs: [],
-        cameraKeys: ['no_helmet', 'triple_riding', 'wrong_parking', 'signal_jumping']
-    },
-    pitchSlide: 0
+    challans: [
+        {
+            id: 'BLR-TE-2026-8812',
+            plate: 'KA-03-MQ-4820',
+            offense: 'No Helmet Rider',
+            location: 'Koramangala 80 Ft Road',
+            timestamp: '15-JUN-2026 21:04',
+            fine: 500,
+            status: 'unpaid',
+            owner: 'Rahul A. Sharma',
+            vehicle: 'Suzuki Access 125 (Black)',
+            ownerPhone: '+91 98765 43210'
+        },
+        {
+            id: 'BLR-TE-2026-8794',
+            plate: 'KA-01-AB-9031',
+            offense: 'Triple Riding',
+            location: 'Silk Board Junction',
+            timestamp: '15-JUN-2026 20:30',
+            fine: 1000,
+            status: 'unpaid',
+            owner: 'Vikram Singh',
+            vehicle: 'Honda Activa 6G (Grey)',
+            ownerPhone: '+91 87654 32109'
+        },
+        {
+            id: 'BLR-TE-2026-8744',
+            plate: 'KA-03-MM-7721',
+            offense: 'No Parking Zone',
+            location: 'MG Road',
+            timestamp: '15-JUN-2026 19:15',
+            fine: 500,
+            status: 'paid',
+            owner: 'Anita K. Rangan',
+            vehicle: 'Hyundai Verna (White)',
+            ownerPhone: '+91 76543 21098'
+        },
+        {
+            id: 'BLR-TE-2026-8691',
+            plate: 'KA-05-ND-5512',
+            offense: 'Red Light Violation',
+            location: 'Marathahalli Bridge',
+            timestamp: '15-JUN-2026 18:45',
+            fine: 1000,
+            status: 'dispatched',
+            owner: 'Devender Yadav',
+            vehicle: 'Maruti Suzuki Swift (Red)',
+            ownerPhone: '+91 99999 88888'
+        }
+    ]
 };
 
 // Chart instances
@@ -152,8 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCharts();
     initUpload();
     initSamples();
-    initSimulator();
-    initPresentation();
+    initChallanTab();
     initModal();
     initConfidenceSlider();
     
@@ -187,10 +230,6 @@ function initNavigation() {
         item.addEventListener('click', (e) => {
             const targetTab = item.getAttribute('data-tab');
             if (targetTab) {
-                // If switching away from simulator, pause simulator
-                if (targetTab !== 'simulator' && state.sim.isRunning) {
-                    toggleSimulator(false);
-                }
                 switchTab(targetTab);
             }
         });
@@ -226,20 +265,17 @@ function switchTab(tabId) {
     if (titleEl && subtitleEl) {
         switch(tabId) {
             case 'dashboard':
-                titleEl.textContent = "Control Dashboard";
-                subtitleEl.textContent = "Real-time highway and city violation analytics cockpit.";
+                titleEl.textContent = "Traffic Enforcement Dashboard";
+                subtitleEl.textContent = "Bengaluru City Municipal Enforcement Analytics & Oversight Console.";
                 break;
             case 'detection':
-                titleEl.textContent = "Detection Center";
-                subtitleEl.textContent = "Computer Vision inspection and enforcement terminal.";
+                titleEl.textContent = "Traffic Violation Review";
+                subtitleEl.textContent = "Enforcement review system for automated detections and OCR verification.";
                 break;
-            case 'simulator':
-                titleEl.textContent = "Camera Simulator";
-                subtitleEl.textContent = "Live edge-AI compliance feeds.";
-                break;
-            case 'presentation':
-                titleEl.textContent = "Pitch Presentation";
-                subtitleEl.textContent = "Slide deck overview for hackathon evaluation.";
+            case 'challan':
+                titleEl.textContent = "E-Challan Portal";
+                subtitleEl.textContent = "Digital traffic violation report and dispatch ledger.";
+                renderChallanLedger();
                 break;
         }
     }
@@ -252,6 +288,7 @@ function switchTab(tabId) {
         }, 100);
     }
 }
+
 
 // 2. Real-Time Clock
 function initClock() {
@@ -274,8 +311,8 @@ function initCharts() {
     
     // Blue gradient for line chart
     const blueGradient = trendCtx.createLinearGradient(0, 0, 0, 200);
-    blueGradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
-    blueGradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+    blueGradient.addColorStop(0, 'rgba(30, 64, 175, 0.15)');
+    blueGradient.addColorStop(1, 'rgba(30, 64, 175, 0.0)');
 
     // 1. Violation Distribution (Bar Chart)
     violationChart = new Chart(violationCtx, {
@@ -286,16 +323,16 @@ function initCharts() {
                 label: 'Cases Detected',
                 data: [142, 88, 172, 60],
                 backgroundColor: [
-                    'rgba(245, 158, 11, 0.8)',
-                    'rgba(220, 38, 38, 0.8)',
-                    'rgba(37, 99, 235, 0.8)',
-                    'rgba(139, 92, 246, 0.8)'
+                    '#D97706', // Warning Amber
+                    '#B91C1C', // Danger Red
+                    '#1E40AF', // Primary Blue
+                    '#15803D'  // Success Green
                 ],
                 borderColor: [
-                    '#f59e0b',
-                    '#dc2626',
-                    '#2563eb',
-                    '#8b5cf6'
+                    '#D97706',
+                    '#B91C1C',
+                    '#1E40AF',
+                    '#15803D'
                 ],
                 borderWidth: 1,
                 borderRadius: 4,
@@ -321,7 +358,7 @@ function initCharts() {
                     ticks: { color: '#475569', font: { family: 'Inter', size: 11 } }
                 },
                 y: {
-                    grid: { color: '#f1f5f9' },
+                    grid: { color: '#e2e8f0' },
                     ticks: { color: '#475569', font: { family: 'Inter', size: 11 } }
                 }
             }
@@ -338,10 +375,10 @@ function initCharts() {
                 data: [35, 48, 52, 28, 41, 18],
                 fill: true,
                 backgroundColor: blueGradient,
-                borderColor: '#2563eb',
+                borderColor: '#1E40AF',
                 borderWidth: 2,
                 tension: 0.35,
-                pointBackgroundColor: '#2563eb',
+                pointBackgroundColor: '#1E40AF',
                 pointHoverRadius: 5
             }]
         },
@@ -364,7 +401,7 @@ function initCharts() {
                     ticks: { color: '#475569', font: { family: 'Inter', size: 11 } }
                 },
                 y: {
-                    grid: { color: '#f1f5f9' },
+                    grid: { color: '#e2e8f0' },
                     ticks: { color: '#475569', font: { family: 'Inter', size: 11 } }
                 }
             }
@@ -373,10 +410,10 @@ function initCharts() {
 }
 
 function updateDashboardUI() {
-    document.getElementById('processedCountEl').textContent = state.dashboardStats.processedCount;
-    document.getElementById('violationCountEl').textContent = state.dashboardStats.violationCount;
-    document.getElementById('challanRevenueEl').textContent = `$${state.dashboardStats.challanRevenue.toLocaleString()}`;
-    document.getElementById('accuracyEl').textContent = `${state.dashboardStats.accuracy}%`;
+    document.getElementById('violationsDetectedTodayEl').textContent = state.dashboardStats.violationsDetectedToday;
+    document.getElementById('activeCasesEl').textContent = state.dashboardStats.activeCases;
+    document.getElementById('generatedChallansEl').textContent = state.dashboardStats.generatedChallans;
+    document.getElementById('avgConfidenceEl').textContent = `${state.dashboardStats.avgConfidence}%`;
 }
 
 // 4. File Upload Logic
@@ -524,8 +561,7 @@ function runInference(imgSource, isCustomUpload) {
             scanLine.classList.remove('scanning');
             overlayText.classList.remove('scanning');
             
-            // Increment dashboard stats
-            state.dashboardStats.processedCount++;
+            // Detections are evaluated dynamically below
             
             // Get detection metadata
             let detectionData;
@@ -616,7 +652,8 @@ function runInference(imgSource, isCustomUpload) {
                     .some(v => v.severity !== 'none');
                 
                 if (hasViolations) {
-                    state.dashboardStats.violationCount++;
+                    state.dashboardStats.violationsDetectedToday++;
+                    state.dashboardStats.activeCases++;
                     updateChartsWithNewViolation(detectionData);
                 }
             }
@@ -631,6 +668,33 @@ function runInference(imgSource, isCustomUpload) {
     };
     
     img.src = imgSource;
+}
+
+// Draw bounding boxes on canvas
+// Mask uncertain characters if OCR confidence is low (< 85%)
+function formatAndMaskPlate(plate, confidence) {
+    if (!plate || plate === '-' || plate.includes("Processing") || plate.includes("recognized")) return plate;
+    let cleanPlate = plate.replace(/\s*\(\d+%\)/, '');
+    if (confidence && confidence < 85) {
+        // Mask a middle character (e.g. KA-03-MQ-4820 -> KA-03-M?-4820)
+        const parts = cleanPlate.split('-');
+        if (parts.length >= 3) {
+            // Usually the third part contains alphabetical series, e.g. "MQ"
+            if (parts[2].length > 1) {
+                parts[2] = parts[2].substring(0, parts[2].length - 1) + "?";
+            } else {
+                parts[2] = "?";
+            }
+            cleanPlate = parts.join('-');
+        } else if (cleanPlate.length > 5) {
+            // Generic fallback masking
+            const chars = cleanPlate.split('');
+            const mid = Math.floor(chars.length / 2);
+            chars[mid] = '?';
+            cleanPlate = chars.join('');
+        }
+    }
+    return cleanPlate;
 }
 
 // Draw bounding boxes on canvas
@@ -658,13 +722,13 @@ function drawDetections(img, data) {
         const h = (box.h / 100) * canvas.height;
         
         // Choose color based on label/severity
-        let color = '#2563eb'; // Enterprise Blue (Safe / Plate)
+        let color = '#1E40AF'; // Primary Blue (Safe / Plate)
         if (v.label === 'License Plate') {
             color = '#8b5cf6'; // Enterprise Violet (OCR / License Plate)
         } else if (v.severity === 'high') {
-            color = '#dc2626'; // Enterprise Red (High severity)
+            color = '#B91C1C'; // Danger Red (High severity)
         } else if (v.severity === 'medium') {
-            color = '#f59e0b'; // Enterprise Amber (Medium severity)
+            color = '#D97706'; // Warning Amber (Medium severity)
         }
         
         // Draw bounding box
@@ -685,7 +749,8 @@ function drawDetections(img, data) {
             } else if (data.plate === 'Plate could not be confidently recognized.') {
                 labelText = `License Plate: Unrecognized (${Math.round(v.confidence * 100)}%)`;
             } else {
-                labelText = `License Plate: ${data.plate} (${Math.round(v.confidence * 100)}%)`;
+                const masked = formatAndMaskPlate(data.plate, data.ocrConfidence);
+                labelText = `License Plate: ${masked} (${Math.round(v.confidence * 100)}%)`;
             }
         }
         const textWidth = ctx.measureText(labelText).width;
@@ -707,6 +772,7 @@ function populateDetails(data) {
     const locationEl = document.getElementById('detailLocation');
     const speedEl = document.getElementById('detailSpeed');
     const plateEl = document.getElementById('detailPlate');
+    const plateConfidenceEl = document.getElementById('detailPlateConfidence');
     
     const statusTextEl = document.getElementById('inferenceStatusText');
     const statusBadgeEl = document.getElementById('inferenceStatusBadge');
@@ -717,6 +783,7 @@ function populateDetails(data) {
         locationEl.textContent = "-";
         speedEl.textContent = "-";
         plateEl.textContent = "-";
+        if (plateConfidenceEl) plateConfidenceEl.textContent = "-";
         listEl.innerHTML = '';
         
         // Update status badge to unrelated
@@ -744,7 +811,21 @@ function populateDetails(data) {
     titleEl.textContent = data.title;
     locationEl.textContent = data.location;
     speedEl.textContent = data.speed;
-    plateEl.textContent = data.plate;
+    
+    // Plate & Confidence formatting
+    if (data.plate === "Processing OCR...") {
+        plateEl.textContent = "Processing OCR...";
+        if (plateConfidenceEl) plateConfidenceEl.textContent = "Reading...";
+    } else if (data.plate === "Plate could not be confidently recognized.") {
+        plateEl.textContent = "Unrecognized";
+        if (plateConfidenceEl) plateConfidenceEl.textContent = "-";
+    } else if (data.plate && data.plate !== '-') {
+        plateEl.textContent = formatAndMaskPlate(data.plate, data.ocrConfidence);
+        if (plateConfidenceEl) plateConfidenceEl.textContent = data.ocrConfidence ? `${data.ocrConfidence}%` : "-";
+    } else {
+        plateEl.textContent = "-";
+        if (plateConfidenceEl) plateConfidenceEl.textContent = "-";
+    }
     
     // Build violation items
     listEl.innerHTML = '';
@@ -801,7 +882,7 @@ function populateDetails(data) {
     const challanBtn = document.getElementById('btnOpenChallan');
     if (fineSum > 0) {
         challanBtn.style.display = 'flex';
-        challanBtn.innerHTML = `<span>Generate E-Challan ($${fineSum})</span>`;
+        challanBtn.innerHTML = `<span>Generate E-Challan (₹${fineSum})</span>`;
         challanBtn.onclick = () => openChallanModal(data, fineSum);
     } else {
         challanBtn.style.display = 'none';
@@ -844,7 +925,7 @@ function resetWorkspace() {
     document.querySelectorAll('.sample-card').forEach(c => c.classList.remove('active'));
 }
 
-// Generate randomized detection parameters for manual custom file upload
+/// Generate randomized detection parameters for manual custom file upload
 function generateCustomMockDetection(filename) {
     const isTraffic = isTrafficImage(filename);
     
@@ -853,6 +934,7 @@ function generateCustomMockDetection(filename) {
             title: "Non-Traffic Scene Detected",
             isNonTraffic: true,
             plate: "-",
+            ocrConfidence: 0,
             vehicle: "-",
             location: "Unknown Location",
             speed: "-",
@@ -862,9 +944,15 @@ function generateCustomMockDetection(filename) {
         };
     }
     
-    const plates = ["DL4S-CQ-1084", "MH14-DA-7788", "HR26-ED-2245", "UP16-AM-4491", "KA51-NB-1090"];
+    const plates = ["KA-03-MM-7721", "KA-01-AB-1234", "KA-05-XY-5678", "KA-51-NB-1090", "KA-03-MQ-4820"];
     const randomPlate = plates[Math.floor(Math.random() * plates.length)];
-    const locations = ["High Street Intersection", "MG Road Traffic Post 07", "Ring Road Flyover Entrance", "Sector 62 Crossing"];
+    const locations = [
+        "Koramangala 80 Ft Road",
+        "Silk Board Junction",
+        "Marathahalli Bridge",
+        "Electronic City Flyover",
+        "MG Road"
+    ];
     const randomLoc = locations[Math.floor(Math.random() * locations.length)];
     const randomSpeedVal = Math.floor(Math.random() * 45) + 35; // 35 to 80 km/h
     
@@ -874,15 +962,18 @@ function generateCustomMockDetection(filename) {
     let title = "Vehicle Speed Alert";
     let speedLabel = `${randomSpeedVal} km/h`;
     
+    // Calculate a realistic confidence value between 75% and 92%
+    const randomConfidence = Math.floor(Math.random() * (92 - 75 + 1)) + 75;
+    
     if (violationRnd < 0.35) { // Speed violation
         title = "Speed Limit Infringement";
         violations = [
             {
-                label: "Car",
+                label: "Four-Wheeler",
                 offense: `Overspeeding (${randomSpeedVal}km/h)`,
                 confidence: 0.91,
                 severity: "high",
-                fine: 150,
+                fine: 1000,
                 box: { x: 20, y: 20, w: 60, h: 60 }
             },
             {
@@ -893,14 +984,14 @@ function generateCustomMockDetection(filename) {
             }
         ];
     } else if (violationRnd < 0.7) { // No Helmet
-        title = "No Helmet Flagged";
+        title = "No Helmet Rider Detection";
         violations = [
             {
-                label: "Bike",
+                label: "Two-Wheeler",
                 offense: "No Helmet Rider",
                 confidence: 0.88,
                 severity: "high",
-                fine: 100,
+                fine: 500,
                 box: { x: 30, y: 15, w: 40, h: 70 }
             },
             {
@@ -914,18 +1005,12 @@ function generateCustomMockDetection(filename) {
         title = "Vehicle Verification Scan";
         violations = [
             {
-                label: "Car",
+                label: "Four-Wheeler",
                 offense: "Safe Vehicle",
                 confidence: 0.96,
                 severity: "none",
                 fine: 0,
                 box: { x: 15, y: 25, w: 70, h: 55 }
-            },
-            {
-                label: "Traffic Signal",
-                confidence: 0.92,
-                severity: "none",
-                box: { x: 75, y: 10, w: 8, h: 22 }
             },
             {
                 label: "License Plate",
@@ -939,6 +1024,7 @@ function generateCustomMockDetection(filename) {
     return {
         title: title,
         plate: randomPlate,
+        ocrConfidence: randomConfidence,
         vehicle: "Vehicle Class - Regular",
         location: randomLoc,
         speed: speedLabel,
@@ -979,13 +1065,6 @@ function updateChartsWithNewViolation(data) {
     const trendData = trendChart.data.datasets[0].data;
     trendData[trendData.length - 1]++;
     trendChart.update();
-    
-    // 3. Update dashboard revenue stats
-    let fineAmt = 0;
-    data.violations.forEach(v => {
-        fineAmt += v.fine || 0;
-    });
-    state.dashboardStats.challanRevenue += fineAmt;
 }
 
 // 8. E-Challan Generator & Modal Dialog
@@ -1008,26 +1087,54 @@ function initModal() {
 function openChallanModal(data, totalFine) {
     const overlay = document.getElementById('challanModal');
     
-    // Mock details
-    const challanNum = 'TX-2026-' + Math.floor(Math.random() * 90000 + 10000);
-    const dateStr = new Date().toLocaleString('en-US', { hour12: false });
+    // Check if this violation already has a challan generated in our array
+    let existingChallan = state.challans.find(c => c.plate === data.plate && c.location === data.location && c.fine === totalFine);
+    
+    let challanNum;
+    if (existingChallan) {
+        challanNum = existingChallan.id;
+    } else {
+        challanNum = 'BLR-TE-2026-' + Math.floor(Math.random() * 90000 + 10000);
+        const dateStr = new Date().toLocaleString('en-US', { hour12: false });
+        
+        // List core violations
+        const violationsNames = data.violations
+            .filter(v => v.severity !== 'none')
+            .map(v => v.offense || v.label)
+            .join(', ');
+            
+        existingChallan = {
+            id: challanNum,
+            plate: data.plate,
+            offense: violationsNames,
+            location: data.location,
+            timestamp: dateStr,
+            fine: totalFine,
+            status: 'unpaid', // starts unpaid
+            owner: data.owner || "Rahul A. Sharma",
+            vehicle: data.vehicle || "Suzuki Access 125 (Black)",
+            ownerPhone: data.ownerPhone || "+91 98765 43210",
+            ocrConfidence: data.ocrConfidence || 88
+        };
+        
+        state.challans.push(existingChallan);
+        state.dashboardStats.generatedChallans = state.challans.length;
+        if (state.dashboardStats.activeCases > 0) {
+            state.dashboardStats.activeCases--;
+        }
+        updateDashboardUI();
+    }
     
     // Map values
-    document.getElementById('mChallanNo').textContent = challanNum;
-    document.getElementById('mTimestamp').textContent = dateStr;
-    const displayPlate = data.plate ? data.plate.replace(/\s*\(\d+%\)/, '') : '-';
+    document.getElementById('mChallanNo').textContent = existingChallan.id;
+    document.getElementById('mTimestamp').textContent = existingChallan.timestamp;
+    const displayPlate = formatAndMaskPlate(existingChallan.plate, existingChallan.ocrConfidence);
     document.getElementById('mPlateNo').textContent = displayPlate;
-    document.getElementById('mOwnerName').textContent = data.owner;
-    document.getElementById('mVehicleDetails').textContent = data.vehicle;
-    document.getElementById('mOffenseLocation').textContent = data.location;
-    
-    // List core violations
-    const violationsNames = data.violations
-        .filter(v => v.severity !== 'none')
-        .map(v => v.offense || v.label)
-        .join(', ');
-    document.getElementById('mOffenseType').textContent = violationsNames;
-    document.getElementById('mFineAmount').textContent = `$${totalFine}`;
+    document.getElementById('mOwnerName').textContent = existingChallan.owner;
+    document.getElementById('mVehicleDetails').textContent = existingChallan.vehicle;
+    document.getElementById('mOffenseLocation').textContent = existingChallan.location;
+    document.getElementById('mOffenseType').textContent = existingChallan.offense;
+    document.getElementById('mFineAmount').textContent = `₹${existingChallan.fine}`;
     
     // Set Snapshot Image (use the canvas rendering image directly)
     const modalImg = document.getElementById('mSnapshotImg');
@@ -1042,13 +1149,17 @@ function openChallanModal(data, totalFine) {
     
     // Setup Action Handlers inside Modal
     document.getElementById('btnPayChallan').onclick = () => {
+        existingChallan.status = 'paid';
         showToast("Payment Successful", `Challan ${challanNum} has been paid and marked cleared in records.`);
         overlay.classList.remove('active');
+        renderChallanLedger();
     };
     
     document.getElementById('btnDispatchSMS').onclick = () => {
-        showToast("E-Challan Dispatched", `Notification alert and payment link sent to ${data.ownerPhone}.`);
+        existingChallan.status = 'dispatched';
+        showToast("E-Challan Dispatched", `Notification alert and payment link sent to ${existingChallan.ownerPhone}.`);
         overlay.classList.remove('active');
+        renderChallanLedger();
     };
     
     overlay.classList.add('active');
@@ -1066,225 +1177,136 @@ function showToast(title, body) {
     }, 4000);
 }
 
-// 10. Live Traffic Camera Feed Simulator
-function initSimulator() {
-    const toggleBtn = document.getElementById('btnToggleSim');
+// 10. E-Challan Tab Initialization and Ledger rendering
+function initChallanTab() {
+    const searchInput = document.getElementById('challanSearch');
+    const statusFilter = document.getElementById('challanStatusFilter');
     
-    toggleBtn.addEventListener('click', () => {
-        if (state.sim.isRunning) {
-            toggleSimulator(false);
-        } else {
-            toggleSimulator(true);
-        }
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            renderChallanLedger();
+        });
+    }
     
-    // Pre-populate camera logs list
-    const logFeed = document.getElementById('logFeed');
-    logFeed.innerHTML = `
-        <div class="log-item">
-            <div class="log-header">
-                <span class="log-title">System Initialized</span>
-                <span class="log-time">23:05:00</span>
-            </div>
-            <div class="log-desc">AI Edge processing nodes listening to Camera Feed 01-04.</div>
-        </div>
-    `;
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            renderChallanLedger();
+        });
+    }
 }
 
-function toggleSimulator(start) {
-    const toggleBtn = document.getElementById('btnToggleSim');
-    const simStatusEl = document.getElementById('simStatusText');
-    const dotEl = document.getElementById('simPulseDot');
+function renderChallanLedger() {
+    const searchInput = document.getElementById('challanSearch');
+    const statusFilter = document.getElementById('challanStatusFilter');
+    const tableBody = document.querySelector('#challanLedgerTable tbody');
     
-    if (start) {
-        state.sim.isRunning = true;
-        toggleBtn.innerHTML = `
-            <svg style="width:18px;height:18px;stroke:currentColor;fill:none;" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
-            <span>Pause Camera Feed</span>
+    if (!tableBody) return;
+    
+    const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const selectedStatus = statusFilter ? statusFilter.value : 'all';
+    
+    // Filter challans based on search query and status filter
+    const filtered = state.challans.filter(c => {
+        const matchesSearch = c.id.toLowerCase().includes(searchText) || c.plate.toLowerCase().includes(searchText);
+        const matchesStatus = selectedStatus === 'all' || c.status === selectedStatus;
+        return matchesSearch && matchesStatus;
+    });
+    
+    // Reset ledger list content
+    tableBody.innerHTML = '';
+    
+    if (filtered.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">No challan records found.</td>
+            </tr>
         `;
-        toggleBtn.classList.remove('btn-ctrl-primary');
-        toggleBtn.classList.add('btn-ctrl-secondary');
-        simStatusEl.textContent = "Feed Active (Simulating)";
-        simStatusEl.style.color = "var(--primary)";
-        dotEl.style.backgroundColor = "var(--primary)";
-        dotEl.style.boxShadow = "none";
-        
-        // Start simulation timer
-        state.sim.intervalId = setInterval(runSimulationStep, 2500); // Step every 2.5 seconds
-        runSimulationStep(); // Immediate run
     } else {
-        state.sim.isRunning = false;
-        toggleBtn.innerHTML = `
-            <svg style="width:18px;height:18px;stroke:#070a13;fill:none;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            <span>Start Camera Feed</span>
-        `;
-        toggleBtn.classList.remove('btn-ctrl-secondary');
-        toggleBtn.classList.add('btn-ctrl-primary');
-        simStatusEl.textContent = "Feed Paused";
-        simStatusEl.style.color = "var(--text-muted)";
-        dotEl.style.backgroundColor = "var(--text-dark)";
-        dotEl.style.boxShadow = "none";
-        
-        clearInterval(state.sim.intervalId);
-    }
-}
-
-function runSimulationStep() {
-    const canvas = document.getElementById('simulatorCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Load next image in cycle
-    const key = state.sim.cameraKeys[state.sim.currentFrameIndex];
-    const data = sampleDetections[key];
-    const img = new Image();
-    
-    img.onload = () => {
-        // Draw to simulator canvas
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        // Draw Bounding boxes on the Simulator Feed
-        data.violations.forEach(v => {
-            const box = v.box;
-            const x = (box.x / 100) * canvas.width;
-            const y = (box.y / 100) * canvas.height;
-            const w = (box.w / 100) * canvas.width;
-            const h = (box.h / 100) * canvas.height;
+        filtered.forEach(c => {
+            const tr = document.createElement('tr');
             
-            let color = '#059669'; // Enterprise Green (Safe / Compliance)
-            if (v.label === 'License Plate') {
-                color = '#8b5cf6'; // Enterprise Violet (OCR / License Plate)
-            } else if (v.severity === 'high') {
-                color = '#dc2626'; // Enterprise Red (High severity)
-            } else if (v.severity === 'medium') {
-                color = '#f59e0b'; // Enterprise Amber (Medium severity)
-            }
+            let badgeClass = 'badge-danger';
+            if (c.status === 'paid') badgeClass = 'badge-success';
+            else if (c.status === 'dispatched') badgeClass = 'badge-warning';
             
-            ctx.strokeStyle = color;
-            ctx.lineWidth = Math.max(2.5, canvas.width / 180);
-            ctx.strokeRect(x, y, w, h);
+            const displayPlate = formatAndMaskPlate(c.plate, c.ocrConfidence || 80);
             
-            // Text tag background
-            ctx.fillStyle = color;
-            const fontSize = Math.max(10, Math.round(canvas.width / 45));
-            ctx.font = `bold ${fontSize}px Inter, sans-serif`;
-            
-            let tagStr = `${v.label}`;
-            if (v.label === 'License Plate' && data.plate && data.plate !== '-') {
-                tagStr = `Plate: ${data.plate}`;
-            }
-            const labelWidth = ctx.measureText(tagStr).width;
-            ctx.fillRect(x - ctx.lineWidth/2, y - fontSize - 5, labelWidth + 10, fontSize + 5);
-            
-            // Text color white
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(tagStr, x + 5 - ctx.lineWidth/2, y - 4);
+            tr.innerHTML = `
+                <td><strong>${c.id}</strong></td>
+                <td>${displayPlate}</td>
+                <td>${c.offense}</td>
+                <td>${c.location}</td>
+                <td>${c.timestamp}</td>
+                <td>₹${c.fine}</td>
+                <td><span class="badge ${badgeClass}">${c.status}</span></td>
+                <td>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; width: auto;" onclick="viewChallanById('${c.id}')">View</button>
+                        ${c.status !== 'paid' ? `<button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; width: auto; background: var(--secondary);" onclick="settleChallanById('${c.id}')">Settle</button>` : ''}
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(tr);
         });
-        
-        // Output live camera log
-        logCameraIncident(data);
-        
-        // Update stats
-        state.dashboardStats.processedCount++;
-        const hasViolations = data.violations.some(v => v.severity !== 'none');
-        if (hasViolations) {
-            state.dashboardStats.violationCount++;
-            state.dashboardStats.challanRevenue += data.violations.reduce((sum, v) => sum + (v.fine || 0), 0);
-            updateChartsWithNewViolation(data);
+    }
+    
+    // Calculate ledger metrics
+    let totalFines = 0;
+    let paidFines = 0;
+    let pendingFines = 0;
+    let paidCount = 0;
+    let pendingCount = 0;
+    
+    state.challans.forEach(c => {
+        totalFines += c.fine;
+        if (c.status === 'paid') {
+            paidFines += c.fine;
+            paidCount++;
+        } else {
+            pendingFines += c.fine;
+            pendingCount++;
         }
-        updateDashboardUI();
-        
-        // Cycle frame pointer
-        state.sim.currentFrameIndex = (state.sim.currentFrameIndex + 1) % state.sim.cameraKeys.length;
-    };
-    img.src = data.imagePath;
+    });
+    
+    const settlementRate = state.challans.length > 0 ? Math.round((paidFines / totalFines) * 100) : 0;
+    
+    document.getElementById('cTotalFines').textContent = `₹${totalFines.toLocaleString('en-IN')}`;
+    document.getElementById('cPaidFines').textContent = `₹${paidFines.toLocaleString('en-IN')}`;
+    document.getElementById('cPendingFines').textContent = `₹${pendingFines.toLocaleString('en-IN')}`;
+    document.getElementById('cPaidCountText').textContent = `${paidCount} Challan${paidCount !== 1 ? 's' : ''} Settled`;
+    document.getElementById('cPendingCountText').textContent = `${pendingCount} Case${pendingCount !== 1 ? 's' : ''} Pending`;
+    document.getElementById('cSettlementRate').textContent = `${settlementRate}%`;
+    document.getElementById('cSettlementRatio').textContent = `${paidCount} Paid / ${state.challans.length} Total`;
 }
 
-function logCameraIncident(data) {
-    const logFeed = document.getElementById('logFeed');
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
-    // Core violation name
-    const activeViolations = data.violations.filter(v => v.severity !== 'none');
-    
-    let isDanger = activeViolations.some(v => v.severity === 'high');
-    let isWarning = activeViolations.some(v => v.severity === 'medium') && !isDanger;
-    
-    let classModifier = '';
-    let logTitle = 'Vehicle Checked';
-    let logDesc = `Plate ${data.plate} scanned successfully. No violation identified.`;
-    
-    if (activeViolations.length > 0) {
-        logTitle = `Violation Detected!`;
-        const names = activeViolations.map(v => v.label).join(' & ');
-        logDesc = `${names} flagged on ${data.plate} at ${data.location}.`;
-        
-        if (isDanger) {
-            classModifier = 'log-danger';
-        } else if (isWarning) {
-            classModifier = 'log-warning';
-        }
+// Global hookups for row clicks
+window.viewChallanById = function(id) {
+    const challan = state.challans.find(c => c.id === id);
+    if (challan) {
+        const mockData = {
+            plate: challan.plate,
+            owner: challan.owner,
+            vehicle: challan.vehicle,
+            location: challan.location,
+            ownerPhone: challan.ownerPhone,
+            violations: [
+                {
+                    label: "Challan Record",
+                    offense: challan.offense,
+                    severity: "high"
+                }
+            ],
+            ocrConfidence: challan.ocrConfidence || 88
+        };
+        openChallanModal(mockData, challan.fine);
     }
-    
-    const logItem = document.createElement('div');
-    logItem.className = `log-item ${classModifier}`;
-    logItem.innerHTML = `
-        <div class="log-header">
-            <span class="log-title">${logTitle}</span>
-            <span class="log-time">${timeStr}</span>
-        </div>
-        <div class="log-desc">${logDesc}</div>
-    `;
-    
-    logFeed.insertBefore(logItem, logFeed.firstChild);
-    
-    // Keep max 20 logs
-    while (logFeed.children.length > 20) {
-        logFeed.removeChild(logFeed.lastChild);
-    }
-}
+};
 
-// 11. Presentation/Pitch Deck Navigation Logic
-function initPresentation() {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
-    const prevBtn = document.getElementById('btnPrevSlide');
-    const nextBtn = document.getElementById('btnNextSlide');
-    
-    const showSlide = (index) => {
-        state.pitchSlide = index;
-        
-        slides.forEach((slide, i) => {
-            if (i === index) slide.classList.add('active');
-            else slide.classList.remove('active');
-        });
-        
-        dots.forEach((dot, i) => {
-            if (i === index) dot.classList.add('active');
-            else dot.classList.remove('active');
-        });
-        
-        // Button states
-        prevBtn.disabled = index === 0;
-        nextBtn.disabled = index === slides.length - 1;
-    };
-    
-    // Event handlers for arrows
-    prevBtn.addEventListener('click', () => {
-        if (state.pitchSlide > 0) showSlide(state.pitchSlide - 1);
-    });
-    
-    nextBtn.addEventListener('click', () => {
-        if (state.pitchSlide < slides.length - 1) showSlide(state.pitchSlide + 1);
-    });
-    
-    // Event handlers for dots
-    dots.forEach((dot, i) => {
-        dot.addEventListener('click', () => showSlide(i));
-    });
-    
-    // Show first slide
-    showSlide(0);
-}
+window.settleChallanById = function(id) {
+    const challan = state.challans.find(c => c.id === id);
+    if (challan) {
+        challan.status = 'paid';
+        showToast("Payment Successful", `Challan ${id} has been paid and marked cleared in records.`);
+        renderChallanLedger();
+    }
+};
