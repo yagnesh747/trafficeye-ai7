@@ -533,16 +533,80 @@ function runInference(imgSource, isCustomUpload) {
                 // Generate a smart mock violation/detection based on filename keywords
                 detectionData = generateCustomMockDetection(state.uploadedImageName);
             } else {
-                detectionData = sampleDetections[state.activeDetectionKey];
+                // Clone the sample data to avoid permanently mutating the template values
+                detectionData = JSON.parse(JSON.stringify(sampleDetections[state.activeDetectionKey]));
             }
             
             // Save global state references for threshold filtering redrawing
             state.currentImage = img;
             state.currentDetectionData = detectionData;
             
-            // Draw boxes and populate UI
-            drawDetections(img, detectionData);
-            populateDetails(detectionData);
+            // Detect the license plate region
+            const plateViolation = detectionData.isNonTraffic ? null : detectionData.violations.find(v => v.label === 'License Plate');
+            
+            if (plateViolation && plateViolation.box) {
+                // Set intermediate loading state
+                detectionData.plate = "Processing OCR...";
+                
+                // Draw initial detections and populate details (showing "Processing OCR...")
+                drawDetections(img, detectionData);
+                populateDetails(detectionData);
+                
+                // Crop the license plate region using a temporary canvas
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                const cropX = (plateViolation.box.x / 100) * img.naturalWidth;
+                const cropY = (plateViolation.box.y / 100) * img.naturalHeight;
+                const cropW = (plateViolation.box.w / 100) * img.naturalWidth;
+                const cropH = (plateViolation.box.h / 100) * img.naturalHeight;
+                
+                tempCanvas.width = cropW;
+                tempCanvas.height = cropH;
+                
+                tempCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+                
+                // Run OCR using Tesseract.js
+                Tesseract.recognize(
+                    tempCanvas,
+                    'eng',
+                    {
+                        logger: m => console.log(m)
+                    }
+                ).then(({ data: { text, confidence } }) => {
+                    console.log("OCR Result Text:", text, "Confidence:", confidence);
+                    
+                    // Clean text (remove whitespace and non-alphanumeric/hyphen/space characters)
+                    const cleanedText = text.trim().replace(/[^A-Za-z0-9\- ]/g, '');
+                    
+                    if (cleanedText.length >= 3 && confidence >= 35) {
+                        detectionData.plate = `${cleanedText} (${Math.round(confidence)}%)`;
+                    } else {
+                        detectionData.plate = "Plate could not be confidently recognized.";
+                    }
+                    
+                    // Update UI only if this detection is still the active one
+                    if (state.currentDetectionData === detectionData) {
+                        drawDetections(img, detectionData);
+                        populateDetails(detectionData);
+                    }
+                }).catch(err => {
+                    console.error("OCR Error:", err);
+                    detectionData.plate = "Plate could not be confidently recognized.";
+                    if (state.currentDetectionData === detectionData) {
+                        drawDetections(img, detectionData);
+                        populateDetails(detectionData);
+                    }
+                });
+            } else {
+                // If there's no license plate region or it's a non-traffic scene
+                if (!detectionData.isNonTraffic) {
+                    detectionData.plate = "Plate could not be confidently recognized.";
+                }
+                
+                drawDetections(img, detectionData);
+                populateDetails(detectionData);
+            }
             
             // Increment statistics on violation count (only if detections exist and pass confidence threshold)
             if (!detectionData.isNonTraffic) {
@@ -616,7 +680,13 @@ function drawDetections(img, data) {
         
         let labelText = `${v.label} (${Math.round(v.confidence * 100)}%)`;
         if (v.label === 'License Plate' && data.plate && data.plate !== '-') {
-            labelText = `License Plate: ${data.plate} (${Math.round(v.confidence * 100)}%)`;
+            if (data.plate === 'Processing OCR...') {
+                labelText = `License Plate: Reading... (${Math.round(v.confidence * 100)}%)`;
+            } else if (data.plate === 'Plate could not be confidently recognized.') {
+                labelText = `License Plate: Unrecognized (${Math.round(v.confidence * 100)}%)`;
+            } else {
+                labelText = `License Plate: ${data.plate} (${Math.round(v.confidence * 100)}%)`;
+            }
         }
         const textWidth = ctx.measureText(labelText).width;
         
@@ -945,7 +1015,8 @@ function openChallanModal(data, totalFine) {
     // Map values
     document.getElementById('mChallanNo').textContent = challanNum;
     document.getElementById('mTimestamp').textContent = dateStr;
-    document.getElementById('mPlateNo').textContent = data.plate;
+    const displayPlate = data.plate ? data.plate.replace(/\s*\(\d+%\)/, '') : '-';
+    document.getElementById('mPlateNo').textContent = displayPlate;
     document.getElementById('mOwnerName').textContent = data.owner;
     document.getElementById('mVehicleDetails').textContent = data.vehicle;
     document.getElementById('mOffenseLocation').textContent = data.location;
