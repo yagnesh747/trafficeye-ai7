@@ -362,6 +362,19 @@
                                     </div>
                                 </div>
                                 
+                                <!-- Operator Review Panel — Confirm / Reject via Backend -->
+                                <div id="reviewActionPanel" style="display:none;gap:8px;margin-bottom:10px;padding:10px;background:rgba(30,64,175,0.06);border:1px solid rgba(30,64,175,0.2);border-radius:6px;">
+                                    <p style="font-size:0.7rem;color:var(--text-muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;">⚖️ Operator Review Required</p>
+                                    <div style="display:flex;gap:8px;">
+                                        <button class="btn btn-primary" id="btnConfirmViolation" style="flex:1;background:#15803D;font-size:0.8rem;padding:8px;">
+                                            ✓ Confirm &amp; Issue Challan
+                                        </button>
+                                        <button class="btn btn-secondary" id="btnRejectViolation" style="flex:1;font-size:0.8rem;padding:8px;border-color:#B91C1C;color:#B91C1C;">
+                                            ✗ Reject (False Positive)
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div class="action-buttons" style="margin-top: auto;">
                                     <button class="btn btn-primary" id="btnOpenChallan">
                                         <span>Generate E-Challan</span>
@@ -372,9 +385,10 @@
                                 </div>
                             </div>
                             
-                            <!-- Prototype Disclaimer -->
-                            <div class="detection-disclaimer" style="position: absolute; bottom: 12px; left: 20px; right: 20px; font-size: 0.7rem; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border-color); padding-top: 8px; font-weight: 500;">
-                                Prototype demonstration using simulated computer vision outputs.
+                            <!-- Backend Status Badge -->
+                            <div class="detection-disclaimer" style="position: absolute; bottom: 12px; left: 20px; right: 20px; font-size: 0.7rem; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border-color); padding-top: 8px; font-weight: 500; display: flex; justify-content: space-between;">
+                                <span>⚡ AI Pipeline: YOLOv8 + OpenCV OCR</span>
+                                <span id="performanceBadge" style="color: var(--primary);"></span>
                             </div>
                         </div>
                     </div>
@@ -579,7 +593,8 @@
         </div>
     </div>
     
-    <!-- Application Logic -->
+    <!-- API Client & Application Logic -->
+    <script src="js/api.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
