@@ -1,53 +1,27 @@
-// TrafficEye AI — Core Application Logic (Phase 8: Full Backend Integration)
-// All dashboard metrics, violations, and challans now load from the FastAPI REST backend.
-// Simulated OCR replaced with real server-side Python OCR pipeline.
+// TrafficEye AI — Core Application Logic (Phase 5: Real ML Pipeline Integration)
+// All dashboard metrics, vehicle detections, helmet detections, and challans load from backend API.
+// Simulated mock detections and hardcoded numbers have been removed.
 
 // ====================================================================
-// Sample detection metadata (bounding boxes for canvas rendering)
-// These are ONLY used for canvas overlay drawing on sample images.
-// Actual violation detection happens on the backend.
+// Sample metadata references (image paths for sample selector)
+// Actual detections and violations are executed on the backend ML models.
 // ====================================================================
-const sampleDetections = {
+const sampleCards = {
     no_helmet: {
-        title: "No Helmet Rider Detection",
-        imagePath: "images/samples/no_helmet.png",
-        location: "Koramangala 80 Ft Road",
-        speed: "34 km/h",
-        violations: [
-            { label: "Two-Wheeler", offense: "No Helmet Rider", confidence: 0.92, severity: "high", fine: 500, box: { x: 29, y: 32, w: 37, h: 56 } },
-            { label: "License Plate", confidence: 0.88, severity: "none", box: { x: 33, y: 70, w: 8, h: 5 } }
-        ]
+        title: "No Helmet Scenario",
+        imagePath: "images/samples/no_helmet.png"
     },
     triple_riding: {
-        title: "Triple Riding Infraction",
-        imagePath: "images/samples/triple_riding.png",
-        location: "Silk Board Junction",
-        speed: "28 km/h",
-        violations: [
-            { label: "Two-Wheeler", offense: "Triple Riding", confidence: 0.89, severity: "high", fine: 1000, box: { x: 36, y: 39, w: 33, h: 44 } },
-            { label: "License Plate", confidence: 0.79, severity: "none", box: { x: 39, y: 69, w: 4, h: 3 } }
-        ]
+        title: "Triple Riding Scenario",
+        imagePath: "images/samples/triple_riding.png"
     },
     wrong_parking: {
-        title: "Wrong Parking Violation",
-        imagePath: "images/samples/wrong_parking.png",
-        location: "MG Road",
-        speed: "0 km/h (Stationary)",
-        violations: [
-            { label: "Four-Wheeler", offense: "No Parking Zone", confidence: 0.91, severity: "medium", fine: 500, box: { x: 17, y: 43, w: 47, h: 35 } },
-            { label: "License Plate", confidence: 0.84, severity: "none", box: { x: 32, y: 61, w: 7, h: 3 } }
-        ]
+        title: "Wrong Parking Scenario",
+        imagePath: "images/samples/wrong_parking.png"
     },
     signal_jumping: {
-        title: "Signal Jumping Evaded",
-        imagePath: "images/samples/signal_jumping.png",
-        location: "Marathahalli Bridge",
-        speed: "58 km/h",
-        violations: [
-            { label: "Four-Wheeler", offense: "Red Light Violation", confidence: 0.90, severity: "high", fine: 1000, box: { x: 18, y: 51, w: 48, h: 22 } },
-            { label: "Traffic Signal", confidence: 0.94, severity: "none", box: { x: 38, y: 9, w: 9, h: 11 } },
-            { label: "License Plate", confidence: 0.81, severity: "none", box: { x: 60, y: 65, w: 4, h: 2.5 } }
-        ]
+        title: "Signal Jumping Scenario",
+        imagePath: "images/samples/signal_jumping.png"
     }
 };
 
@@ -62,16 +36,16 @@ const state = {
     confidenceThreshold: 0.65,
     currentImage: null,
     currentDetectionData: null,
-    lastApiResult: null,          // Stores last backend API response
+    lastApiResult: null,          // Stores real backend API response
     lastViolationDbId: null,      // Tracks last created DB violation ID
     backendOnline: false,
-    // Fallback local challan state (used when backend is offline)
-    challans: [
-        { id: 'BTP-CH-100201', plate: 'KA-01-AB-9031', offense: 'Triple Riding', location: 'Silk Board Junction', timestamp: '08-SEP-2026 14:40', fine: 1000, status: 'dispatched', owner: 'Vikram Singh', vehicle: 'Honda Activa 6G (Grey)', ownerPhone: '+91 87654 32109', ocrConfidence: 88 },
-        { id: 'BTP-CH-100100', plate: 'KA-03-MQ-4820', offense: 'No Helmet Rider', location: 'Koramangala 80 Ft Road', timestamp: '08-SEP-2026 14:01', fine: 500, status: 'unpaid', owner: 'Rahul A. Sharma', vehicle: 'Suzuki Access 125 (Black)', ownerPhone: '+91 98765 43210', ocrConfidence: 92 },
-        { id: 'BTP-CH-99901', plate: 'KA-03-MM-7721', offense: 'Wrong Parking Zone', location: 'MG Road', timestamp: '08-SEP-2026 12:15', fine: 500, status: 'paid', owner: 'Anita K. Rangan', vehicle: 'Hyundai Verna (White)', ownerPhone: '+91 76543 21098', ocrConfidence: 84 },
-    ],
-    dashboardStats: { violationsDetectedToday: 142, activeCases: 48, generatedChallans: 84, avgConfidence: 89.2 }
+    challans: [],                 // Populated from backend API
+    dashboardStats: {
+        violationsDetectedToday: 0,
+        activeCases: 0,
+        generatedChallans: 0,
+        avgConfidence: 0
+    }
 };
 
 let violationChart = null;
@@ -81,6 +55,7 @@ let trendChart = null;
 // Initialization
 // ====================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    initTheme();
     initNavigation();
     initClock();
     initCharts();
@@ -88,6 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSamples();
     initChallanTab();
     initModal();
+    initAuth();
     initConfidenceSlider();
 
     switchTab('dashboard');
@@ -95,6 +71,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Try to load real metrics from backend
     await loadDashboardMetrics();
 });
+
+// ====================================================================
+// Theme Management (Light / White is default)
+// ====================================================================
+function initTheme() {
+    const savedTheme = localStorage.getItem('trafficeye_theme') || 'light';
+    applyTheme(savedTheme);
+
+    const toggleBtn = document.getElementById('themeToggleBtn');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+            localStorage.setItem('trafficeye_theme', next);
+        });
+    }
+}
+
+function applyTheme(theme) {
+    const icon = document.getElementById('themeToggleIcon');
+    const label = document.getElementById('themeToggleLabel');
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        if (icon) icon.textContent = '☀️';
+        if (label) label.textContent = 'Light';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (icon) icon.textContent = '🌙';
+        if (label) label.textContent = 'Dark';
+    }
+}
 
 // ====================================================================
 // 1. Dashboard: Fetch real metrics from backend
@@ -131,6 +139,48 @@ async function loadDashboardMetrics() {
         updateDashboardUI();
         const statusEl = document.querySelector('.system-status-val');
         if (statusEl) statusEl.textContent = 'Offline (Local Mode)';
+    }
+
+    await loadRecentIncidents();
+}
+
+async function loadRecentIncidents() {
+    const tbody = document.getElementById('recentIncidentsTableBody');
+    if (!tbody) return;
+
+    if (!state.backendOnline) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Backend offline. Incidents unavailable.</td></tr>';
+        return;
+    }
+
+    try {
+        const violations = await TrafficEyeAPI.getViolations();
+        if (!violations || violations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">No violation incidents in database yet. Upload an image or video to analyze real violations.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        violations.slice(0, 10).forEach(v => {
+            const tr = document.createElement('tr');
+            const plate = (v.vehicle && v.vehicle.registration_number) ? v.vehicle.registration_number : 'UNREADABLE';
+            const conf = Math.round((v.violation_confidence || 0) * 100);
+            const badgeClass = v.status === 'CONFIRMED' ? 'badge-danger' : (v.status === 'REJECTED' ? 'badge-muted' : 'badge-warning');
+            const typeLabel = (v.violation_type || 'VIOLATION').replace(/_/g, ' ');
+            const loc = v.location_name || 'Camera Zone 1';
+
+            tr.innerHTML = `
+                <td><strong>#VIOL-${v.id}</strong></td>
+                <td><span class="plate-text">${plate}</span></td>
+                <td>${typeLabel}</td>
+                <td>${loc}</td>
+                <td>${conf}%</td>
+                <td><span class="badge ${badgeClass}">${v.status}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (_) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Failed to load incident records from API.</td></tr>';
     }
 }
 
@@ -302,26 +352,34 @@ function handleUploadedFile(file) {
     reader.readAsDataURL(file);
 }
 
-// ====================================================================
-// 6. Sample Image Gallery
-// ====================================================================
 function initSamples() {
     document.querySelectorAll('.sample-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', async () => {
             const key = card.getAttribute('data-sample-key');
-            if (key && sampleDetections[key]) {
+            if (key && sampleCards[key]) {
                 document.querySelectorAll('.sample-card').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
                 state.activeDetectionKey = key;
-                state.uploadedFile = null;
-                runInference(sampleDetections[key].imagePath, null, key);
+
+                try {
+                    // Fetch real sample image file to upload via POST /api/analyze/image
+                    const res = await fetch(sampleCards[key].imagePath);
+                    const blob = await res.blob();
+                    const sampleFile = new File([blob], `${key}.png`, { type: 'image/png' });
+                    state.uploadedFile = sampleFile;
+                    runInference(sampleCards[key].imagePath, sampleFile, key);
+                } catch (err) {
+                    console.warn('Direct blob fetch failed, falling back to sampleTag:', err);
+                    state.uploadedFile = null;
+                    runInference(sampleCards[key].imagePath, null, key);
+                }
             }
         });
     });
 }
 
 // ====================================================================
-// 7. Main Inference Pipeline (calls real backend or falls back gracefully)
+// 7. Main Inference Pipeline (calls real backend API)
 // ====================================================================
 async function runInference(imgSource, uploadedFile, sampleTag) {
     if (state.isScanning) return;
@@ -340,7 +398,7 @@ async function runInference(imgSource, uploadedFile, sampleTag) {
     canvasContainer.classList.add('active');
     scanLine.classList.add('scanning');
     overlayText.classList.add('scanning');
-    overlayText.textContent = 'AI ANALYSIS RUNNING…';
+    overlayText.textContent = 'RUNNING REAL ML PIPELINE…';
     emptyDetails.style.display = 'flex';
     detailsContent.style.display = 'none';
 
@@ -360,37 +418,32 @@ async function runInference(imgSource, uploadedFile, sampleTag) {
         canvas.height = h;
         ctx.drawImage(img, 0, 0, w, h);
 
-        // ----- Call Backend API -----
+        // ----- Call Real Backend API -----
         let apiResult = null;
         try {
             apiResult = await TrafficEyeAPI.analyzeImage(uploadedFile, sampleTag);
             state.lastApiResult = apiResult;
-            overlayText.textContent = `✓ ${apiResult.violations.length} VIOLATION(S) DETECTED`;
+            const violCount = (apiResult.violations || []).length;
+            overlayText.textContent = `✓ ${violCount} VIOLATION(S) DETECTED`;
         } catch (err) {
-            console.warn('Backend analysis unavailable, using local fallback:', err);
-            overlayText.textContent = 'OFFLINE — LOCAL MODE';
+            console.error('Backend analysis failed:', err);
+            scanLine.classList.remove('scanning');
+            overlayText.classList.remove('scanning');
+            state.isScanning = false;
+            overlayText.textContent = 'ANALYSIS FAILED';
+            showToast('API Error', err.message || 'Image analysis failed on server.', 'error');
+            displayAnalysisError(err.message || 'Image analysis failed on server.');
+            return;
         }
 
         scanLine.classList.remove('scanning');
         overlayText.classList.remove('scanning');
         state.isScanning = false;
 
-        // Build detection display data
-        let detectionData;
-        if (apiResult) {
-            // Map API response to frontend format
-            detectionData = buildDetectionDataFromAPI(apiResult, sampleTag);
-            // Store the first violation's DB id for confirm/reject actions
-            if (apiResult.violations && apiResult.violations.length > 0) {
-                // Fetch violations from backend to get the real DB id
-                fetchLatestViolationId();
-            }
-        } else if (sampleTag && sampleDetections[sampleTag]) {
-            detectionData = JSON.parse(JSON.stringify(sampleDetections[sampleTag]));
-            detectionData.plate = 'KA-03-MQ-4820';
-            detectionData.ocrConfidence = 88;
-        } else {
-            detectionData = generateCustomMockDetection(uploadedFile ? uploadedFile.name : 'upload.jpg');
+        // Build detection display data strictly from real API response
+        const detectionData = buildDetectionDataFromAPI(apiResult);
+        if (apiResult.violations && apiResult.violations.length > 0) {
+            fetchLatestViolationId();
         }
 
         state.currentImage = img;
@@ -398,15 +451,6 @@ async function runInference(imgSource, uploadedFile, sampleTag) {
 
         drawDetections(img, detectionData);
         populateDetails(detectionData);
-
-        if (!detectionData.isNonTraffic) {
-            const hasViolations = detectionData.violations.filter(v => v.confidence >= state.confidenceThreshold).some(v => v.severity !== 'none');
-            if (hasViolations) {
-                state.dashboardStats.violationsDetectedToday++;
-                state.dashboardStats.activeCases++;
-                updateChartsWithNewViolation(detectionData);
-            }
-        }
         updateDashboardUI();
     };
 
@@ -417,17 +461,23 @@ async function runInference(imgSource, uploadedFile, sampleTag) {
     img.src = imgSource;
 }
 
-function buildDetectionDataFromAPI(apiResult, sampleTag) {
-    // Prefer local canvas bbox data for sample images (for accurate canvas rendering)
-    const localSampleData = sampleTag ? sampleDetections[sampleTag] : null;
+function buildDetectionDataFromAPI(apiResult) {
+    const rawViolations = apiResult.violations || [];
+    const rawDetections = apiResult.detections || [];
+    const helmetDetections = apiResult.helmet_detections || [];
 
-    const violations = apiResult.violations.map(v => {
-        const violationTypeMap = {
-            'NO_HELMET': { label: 'Two-Wheeler', offense: 'No Helmet Rider', severity: 'high', fine: 500 },
-            'TRIPLE_RIDING': { label: 'Two-Wheeler', offense: 'Triple Riding', severity: 'high', fine: 1000 },
-            'WRONG_PARKING': { label: 'Four-Wheeler', offense: 'No Parking Zone', severity: 'medium', fine: 500 },
-            'RED_LIGHT': { label: 'Four-Wheeler', offense: 'Red Light Violation', severity: 'high', fine: 1000 }
-        };
+    const violationTypeMap = {
+        'NO_HELMET': { label: 'Two-Wheeler', offense: 'No Helmet Rider', severity: 'high', fine: 500 },
+        'TRIPLE_RIDING': { label: 'Two-Wheeler', offense: 'Triple Riding', severity: 'high', fine: 1000 },
+        'WRONG_PARKING': { label: 'Four-Wheeler', offense: 'No Parking Zone', severity: 'medium', fine: 500 },
+        'RED_LIGHT': { label: 'Vehicle', offense: 'Red Light Violation', severity: 'high', fine: 1000 }
+    };
+
+    // Canvas render items (boxes)
+    const boxes = [];
+
+    // 1. Violations
+    const violations = rawViolations.map(v => {
         const mapped = violationTypeMap[v.violation_type] || { label: 'Vehicle', offense: v.violation_type, severity: 'high', fine: 500 };
         return {
             label: mapped.label,
@@ -435,42 +485,89 @@ function buildDetectionDataFromAPI(apiResult, sampleTag) {
             confidence: v.confidence,
             severity: mapped.severity,
             fine: mapped.fine,
-            box: v.vehicle_bbox || { x: 20, y: 25, w: 50, h: 50 }
+            reason: v.reason || '',
+            box: v.vehicle_bbox || { x: 20, y: 25, w: 50, h: 50 },
+            detection_source: v.detection_source
         };
     });
 
-    // Add plate bounding box for canvas rendering if available
-    if (apiResult.violations.length > 0 && apiResult.violations[0].plate_bbox) {
-        violations.push({ label: 'License Plate', confidence: 0.88, severity: 'none', box: apiResult.violations[0].plate_bbox });
-    } else if (localSampleData) {
-        const localPlate = localSampleData.violations.find(v => v.label === 'License Plate');
-        if (localPlate) violations.push({ ...localPlate });
-    }
-
-    // Merge YOLO raw detections for non-violation classes (traffic light, person etc.)
-    if (apiResult.detections) {
-        apiResult.detections.forEach(d => {
-            if (d.class_name === 'traffic light') {
-                violations.push({ label: 'Traffic Signal', confidence: d.confidence, severity: 'none', box: d.bbox });
-            }
+    // Add violation boxes to canvas render items
+    violations.forEach(v => {
+        boxes.push({
+            type: 'violation',
+            label: `${v.label}: ${v.offense}`,
+            confidence: v.confidence,
+            severity: v.severity,
+            box: v.box
         });
+    });
+
+    // 2. Real Helmet detections from ML model
+    helmetDetections.forEach(hd => {
+        boxes.push({
+            type: 'helmet',
+            label: hd.class_name,
+            class_id: hd.class_id,
+            confidence: hd.confidence,
+            severity: hd.class_id === 1 ? 'high' : 'none',
+            box: hd.bbox_pct
+        });
+    });
+
+    // 3. Vehicles detected by YOLO
+    rawDetections.forEach(d => {
+        if (['car', 'motorcycle', 'bus', 'truck'].includes(d.class_name)) {
+            boxes.push({
+                type: 'vehicle',
+                label: d.class_name,
+                confidence: d.confidence,
+                severity: 'none',
+                box: d.bbox
+            });
+        }
+    });
+
+    // 4. Real Plate Detection / OCR
+    let plateText = null;
+    let ocrConf = null;
+    for (const v of rawViolations) {
+        if (v.normalized_plate_text && v.normalized_plate_text !== 'NOT_DETECTED') {
+            plateText = v.normalized_plate_text;
+            ocrConf = v.ocr_confidence ? Math.round(v.ocr_confidence * 100) : null;
+            if (v.plate_bbox) {
+                boxes.push({
+                    type: 'plate',
+                    label: `Plate: ${plateText}`,
+                    confidence: v.ocr_confidence || 0.85,
+                    severity: 'none',
+                    box: v.plate_bbox
+                });
+            }
+            break;
+        }
     }
 
-    const firstViolation = apiResult.violations[0];
-    const plateText = firstViolation?.normalized_plate_text || (localSampleData ? 'KA-03-MQ-4820' : null);
-    const ocrConf = firstViolation ? Math.round((firstViolation.ocr_confidence || 0.88) * 100) : 88;
+    const title = violations.length > 0
+        ? violations.map(v => v.offense).join(', ')
+        : (rawDetections.length > 0 ? `${rawDetections.length} Vehicle(s) Detected — No Violations` : 'No Vehicles Detected');
 
     return {
-        title: violations.filter(v => v.severity !== 'none').map(v => v.offense).join(', ') || 'Traffic Scene Analysis',
+        title,
         plate: plateText,
         ocrConfidence: ocrConf,
-        location: localSampleData?.location || 'Bengaluru Municipal Traffic Zone',
-        speed: localSampleData?.speed || 'N/A',
-        vehicle: 'Vehicle Detected',
-        owner: 'Registered Owner',
-        ownerPhone: '+91 98765 43210',
+        location: 'Bengaluru Municipal Enforcement Zone',
+        speed: '-',
+        vehicle: rawDetections.length > 0 ? `${rawDetections.map(d => d.class_name).join(', ')}` : 'No Vehicle',
+        owner: plateText ? 'Registered Owner' : '-',
+        ownerPhone: plateText ? '+91 98765 43210 [DEMO]' : '-',
         violations,
-        apiViolations: apiResult.violations,
+        boxes,
+        detections: rawDetections,
+        helmetDetections,
+        apiViolations: rawViolations,
+        mediaPath: apiResult.media_path,
+        annotatedImagePath: apiResult.annotated_image_path,
+        evidenceImage: apiResult.annotated_image_path || apiResult.media_path,
         processingTimeMs: apiResult.processing_time_ms
     };
 }
@@ -485,63 +582,109 @@ async function fetchLatestViolationId() {
 }
 
 async function runVideoAnalysis(videoFile) {
-    showToast('Video Processing', 'Uploading and processing video. This may take a moment...', 'info');
+    showToast('Video Processing', 'Uploading video to real ML pipeline (YOLO + Helmet + Tracking)...', 'info');
+    const overlayText = document.getElementById('overlayText');
+    const scanLine = document.getElementById('scanLine');
+    const dragArea = document.getElementById('dragArea');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    const canvasContainer = document.getElementById('canvasContainer');
+
+    dragArea.classList.add('has-image');
+    placeholder.style.display = 'none';
+    canvasContainer.classList.add('active');
+    scanLine.classList.add('scanning');
+    overlayText.classList.add('scanning');
+    overlayText.textContent = 'PROCESSING VIDEO FRAMES…';
+
     try {
         const result = await TrafficEyeAPI.analyzeVideo(videoFile);
-        const totalViolations = (result.frame_results || []).reduce((acc, r) => acc + r.violations.length, 0);
-        showToast('Video Processed', `${result.processed_frames_count} frames analyzed. ${totalViolations} violation candidate(s) flagged.`);
+        scanLine.classList.remove('scanning');
+        overlayText.classList.remove('scanning');
+        state.isScanning = false;
+
+        const violCount = (result.violations || []).length;
+        const trackedCount = result.vehicles_tracked_count || 0;
+        overlayText.textContent = `✓ VIDEO COMPLETE: ${trackedCount} TRACKED, ${violCount} VIOLATION(S)`;
+
+        showToast(
+            'Video Processed',
+            `${result.processed_frames_count} frames analyzed. ${trackedCount} vehicle(s) tracked. ${violCount} deduplicated violation(s) flagged.`
+        );
+
+        displayVideoSummary(result);
+        await loadDashboardMetrics();
     } catch (err) {
-        showToast('Video Error', err.message || 'Video processing failed. Please try again.', 'error');
+        scanLine.classList.remove('scanning');
+        overlayText.classList.remove('scanning');
+        state.isScanning = false;
+        overlayText.textContent = 'VIDEO ANALYSIS FAILED';
+        showToast('Video Error', err.message || 'Video analysis failed on server.', 'error');
+        displayAnalysisError(err.message || 'Video processing failed.');
     }
 }
 
 // ====================================================================
-// 8. Canvas Rendering — Bounding Boxes
+// 8. Canvas Rendering — Real Bounding Boxes
 // ====================================================================
-function formatAndMaskPlate(plate, confidence) {
-    if (!plate || plate === '-' || plate.includes('Processing') || plate.includes('recognized')) return plate;
-    let cleanPlate = plate.replace(/\s*\(\d+%\)/, '');
-    if (confidence && confidence < 85) {
-        const parts = cleanPlate.split('-');
-        if (parts.length >= 3 && parts[2].length > 1) {
-            parts[2] = parts[2].substring(0, parts[2].length - 1) + '?';
-            cleanPlate = parts.join('-');
-        }
-    }
-    return cleanPlate;
-}
-
 function drawDetections(img, data) {
     const canvas = document.getElementById('detectionCanvas');
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    if (data.isNonTraffic) return;
+    if (!data.boxes || data.boxes.length === 0) return;
 
     const threshold = state.confidenceThreshold || 0.65;
-    data.violations.filter(v => v.confidence >= threshold).forEach(v => {
-        const { x, y, w, h } = v.box;
+    data.boxes.filter(b => b.confidence >= (b.type === 'violation' ? threshold : 0.20)).forEach(b => {
+        const { x, y, w, h } = b.box;
         const px = (x / 100) * canvas.width, py = (y / 100) * canvas.height;
         const pw = (w / 100) * canvas.width, ph = (h / 100) * canvas.height;
 
-        let color = v.label === 'License Plate' ? '#8b5cf6' : v.severity === 'high' ? '#B91C1C' : v.severity === 'medium' ? '#D97706' : v.label === 'Traffic Signal' ? '#15803D' : '#1E40AF';
+        let color = '#1E40AF'; // Default vehicle blue
+        if (b.type === 'violation') {
+            color = b.severity === 'high' ? '#B91C1C' : '#D97706';
+        } else if (b.type === 'helmet') {
+            color = b.class_id === 0 ? '#15803D' : '#DC2626'; // Green: Helmet, Red: No Helmet
+        } else if (b.type === 'plate') {
+            color = '#8b5cf6'; // Purple: Plate
+        }
+
         ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(2, canvas.width / 300);
+        ctx.lineWidth = b.type === 'violation' ? 3 : 2;
         ctx.strokeRect(px, py, pw, ph);
 
         ctx.fillStyle = color;
-        const fontSize = Math.max(9, Math.round(canvas.width / 50));
+        const fontSize = Math.max(9, Math.round(canvas.width / 55));
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
-        let labelText = `${v.label} (${Math.round(v.confidence * 100)}%)`;
-        if (v.label === 'License Plate' && data.plate) {
-            const masked = formatAndMaskPlate(data.plate, data.ocrConfidence);
-            labelText = `Plate: ${masked} (${Math.round(v.confidence * 100)}%)`;
-        }
+        const labelText = `${b.label} (${Math.round(b.confidence * 100)}%)`;
         const tw = ctx.measureText(labelText).width;
-        const pad = 5;
-        ctx.fillRect(px - ctx.lineWidth / 2, py - fontSize - pad, tw + pad * 2, fontSize + pad);
+        const pad = 4;
+        ctx.fillRect(px - 1, py - fontSize - pad, tw + pad * 2, fontSize + pad);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(labelText, px + pad - ctx.lineWidth / 2, py - pad / 2);
+        ctx.fillText(labelText, px + pad, py - pad / 2);
     });
+}
+
+function formatAndMaskPlate(plate, confidence) {
+    if (!plate || plate === '-' || plate === 'NOT_DETECTED' || plate.includes("Processing") || plate.includes("recognized")) {
+        return plate || 'NOT_DETECTED';
+    }
+    let cleanPlate = plate.replace(/\s*\(\d+%\)/, '');
+    if (confidence && confidence < 85) {
+        const parts = cleanPlate.split('-');
+        if (parts.length >= 3) {
+            if (parts[2].length > 1) {
+                parts[2] = parts[2].substring(0, parts[2].length - 1) + "?";
+            } else {
+                parts[2] = "?";
+            }
+            cleanPlate = parts.join('-');
+        } else if (cleanPlate.length > 5) {
+            const chars = cleanPlate.split('');
+            const mid = Math.floor(chars.length / 2);
+            chars[mid] = '?';
+            cleanPlate = chars.join('');
+        }
+    }
+    return cleanPlate;
 }
 
 function populateDetails(data) {
@@ -558,29 +701,30 @@ function populateDetails(data) {
     const nonTrafficAlertEl = document.getElementById('nonTrafficAlert');
 
     if (data.isNonTraffic) {
-        titleEl.textContent = 'No Traffic Scene Detected';
+        if (titleEl) titleEl.textContent = 'No Traffic Scene Detected';
         [locationEl, speedEl, plateEl].forEach(el => { if (el) el.textContent = '-'; });
         if (plateConfidenceEl) plateConfidenceEl.textContent = '-';
-        listEl.innerHTML = '';
-        statusTextEl.textContent = 'NON-TRAFFIC SCENE DETECTED';
-        statusBadgeEl.className = 'inference-badge badge-unrelated';
-        nonTrafficAlertEl.style.display = 'flex';
-        document.getElementById('btnOpenChallan').style.display = 'none';
-        emptyDetails.style.display = 'none';
-        detailsContent.style.display = 'flex';
+        if (listEl) listEl.innerHTML = '';
+        if (statusTextEl) statusTextEl.textContent = 'NON-TRAFFIC SCENE DETECTED';
+        if (statusBadgeEl) statusBadgeEl.className = 'inference-badge badge-unrelated';
+        if (nonTrafficAlertEl) nonTrafficAlertEl.style.display = 'flex';
+        const challanBtn = document.getElementById('btnOpenChallan');
+        if (challanBtn) challanBtn.style.display = 'none';
+        if (emptyDetails) emptyDetails.style.display = 'none';
+        if (detailsContent) detailsContent.style.display = 'flex';
         return;
     }
 
-    nonTrafficAlertEl.style.display = 'none';
-    statusTextEl.textContent = 'TRAFFIC SCENE CONFIRMED';
-    statusBadgeEl.className = 'inference-badge badge-confirmed';
+    if (nonTrafficAlertEl) nonTrafficAlertEl.style.display = 'none';
+    if (statusTextEl) statusTextEl.textContent = 'TRAFFIC SCENE CONFIRMED';
+    if (statusBadgeEl) statusBadgeEl.className = 'inference-badge badge-confirmed';
 
-    titleEl.textContent = data.title;
-    if (locationEl) locationEl.textContent = data.location;
-    if (speedEl) speedEl.textContent = data.speed;
+    if (titleEl) titleEl.textContent = data.title || 'Traffic Inference Results';
+    if (locationEl) locationEl.textContent = data.location || 'Bengaluru Municipal Zone';
+    if (speedEl) speedEl.textContent = data.speed || '-';
 
     const displayPlate = formatAndMaskPlate(data.plate, data.ocrConfidence);
-    if (plateEl) plateEl.textContent = displayPlate || '-';
+    if (plateEl) plateEl.textContent = displayPlate || 'NOT_DETECTED';
     if (plateConfidenceEl) plateConfidenceEl.textContent = data.ocrConfidence ? `${data.ocrConfidence}%` : '-';
 
     // Show performance metric if available from API
@@ -589,24 +733,35 @@ function populateDetails(data) {
         if (perfBadge) perfBadge.textContent = `⚡ ${Math.round(data.processingTimeMs)}ms`;
     }
 
+    if (!listEl) return;
     listEl.innerHTML = '';
-    const threshold = state.confidenceThreshold || 0.65;
-    const filtered = data.violations.filter(v => v.confidence >= threshold);
     let fineSum = 0;
 
-    if (filtered.length === 0) {
-        listEl.innerHTML = `<div class="empty-details-msg" style="padding:20px 0;border:1px dashed var(--border-color);border-radius:6px;margin-bottom:16px;"><p style="font-size:0.75rem;">No detections above confidence threshold (${Math.round(threshold * 100)}%).</p></div>`;
+    // 1. VIOLATIONS SECTION
+    const violationsHeader = document.createElement('div');
+    violationsHeader.style.cssText = 'font-size:0.75rem;font-weight:700;color:var(--text-main);margin:4px 0 6px;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;';
+    const violCount = (data.violations || []).length;
+    violationsHeader.innerHTML = `<span>⚠️ Violations</span><span style="color:var(--color-danger);font-weight:800;">${violCount}</span>`;
+    listEl.appendChild(violationsHeader);
+
+    if (violCount === 0) {
+        const noViol = document.createElement('div');
+        noViol.className = 'empty-details-msg';
+        noViol.style.cssText = 'padding:10px 12px;border:1px dashed var(--border-color);border-radius:6px;margin-bottom:12px;';
+        noViol.innerHTML = '<p style="font-size:0.75rem;color:var(--text-muted);margin:0;">No traffic violations identified in this frame.</p>';
+        listEl.appendChild(noViol);
     } else {
-        filtered.forEach(v => {
+        data.violations.forEach(v => {
             if (v.severity !== 'none') fineSum += v.fine || 0;
             const item = document.createElement('div');
             item.className = 'violation-detail-item';
             const pct = Math.round(v.confidence * 100);
-            const barColor = v.label === 'License Plate' ? '#8b5cf6' : v.severity === 'high' ? 'var(--color-danger)' : v.severity === 'medium' ? 'var(--color-warning)' : 'var(--primary)';
+            const barColor = v.severity === 'high' ? 'var(--color-danger)' : 'var(--color-warning)';
             item.innerHTML = `
                 <div class="violation-type-label">
-                    <span class="violation-name">${v.label}</span>
-                    <span class="violation-severity ${v.severity}">${v.severity.toUpperCase()} SEVERITY ${v.offense ? `(${v.offense})` : ''}</span>
+                    <span class="violation-name">${v.offense || v.label}</span>
+                    <span class="violation-severity ${v.severity}">${v.severity.toUpperCase()} SEVERITY ${v.fine ? `(₹${v.fine})` : ''}</span>
+                    ${v.reason ? `<span style="font-size:0.7rem;color:var(--text-muted);display:block;margin-top:2px;">${v.reason}</span>` : ''}
                 </div>
                 <div class="violation-score-container" style="flex:1;max-width:120px;margin-left:16px;display:flex;flex-direction:column;">
                     <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
@@ -620,26 +775,121 @@ function populateDetails(data) {
         });
     }
 
+    // 2. HELMET DETECTION STATUS
+    const helmetDets = data.helmetDetections || [];
+    const helmetHeader = document.createElement('div');
+    helmetHeader.style.cssText = 'font-size:0.75rem;font-weight:700;color:var(--text-main);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;';
+    helmetHeader.innerHTML = `<span>⛑️ Helmet Status</span><span style="color:var(--primary);font-weight:800;">${helmetDets.length} Evaluated</span>`;
+    listEl.appendChild(helmetHeader);
+
+    if (helmetDets.length === 0) {
+        const noHelmet = document.createElement('div');
+        noHelmet.style.cssText = 'padding:8px 12px;background:#f8fafc;border:1px solid var(--border-color);border-radius:6px;margin-bottom:12px;font-size:0.75rem;color:var(--text-muted);';
+        noHelmet.textContent = 'No rider head targets detected in scene.';
+        listEl.appendChild(noHelmet);
+    } else {
+        helmetDets.forEach(hd => {
+            const item = document.createElement('div');
+            item.className = 'violation-detail-item';
+            const pct = Math.round(hd.confidence * 100);
+            const isNoHelmet = hd.class_id === 1 || hd.class_name.toLowerCase().includes('without');
+            const statusClass = isNoHelmet ? 'high' : 'none';
+            const barColor = isNoHelmet ? 'var(--color-danger)' : '#10b981';
+            item.innerHTML = `
+                <div class="violation-type-label">
+                    <span class="violation-name">${hd.class_name}</span>
+                    <span class="violation-severity ${statusClass}">${isNoHelmet ? 'NON-COMPLIANT' : 'COMPLIANT'}</span>
+                </div>
+                <div class="violation-score-container" style="flex:1;max-width:120px;margin-left:16px;display:flex;flex-direction:column;">
+                    <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
+                        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-muted);">
+                        <span>Conf.</span><strong>${pct}%</strong>
+                    </div>
+                </div>`;
+            listEl.appendChild(item);
+        });
+    }
+
+    // 3. VEHICLE & OBJECT DETECTIONS (YOLO)
+    const objects = data.detections || [];
+    const objectsHeader = document.createElement('div');
+    objectsHeader.style.cssText = 'font-size:0.75rem;font-weight:700;color:var(--text-main);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;';
+    objectsHeader.innerHTML = `<span>🚗 Objects Detected</span><span style="color:var(--primary);font-weight:800;">${objects.length} Total</span>`;
+    listEl.appendChild(objectsHeader);
+
+    if (objects.length === 0) {
+        const noObj = document.createElement('div');
+        noObj.style.cssText = 'padding:8px 12px;background:#f8fafc;border:1px solid var(--border-color);border-radius:6px;margin-bottom:12px;font-size:0.75rem;color:var(--text-muted);';
+        noObj.textContent = 'No vehicles or pedestrians identified.';
+        listEl.appendChild(noObj);
+    } else {
+        objects.forEach(d => {
+            const item = document.createElement('div');
+            item.className = 'violation-detail-item';
+            const pct = Math.round(d.confidence * 100);
+            item.innerHTML = `
+                <div class="violation-type-label">
+                    <span class="violation-name" style="text-transform:capitalize;">${d.class_name}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);">YOLOv8 Detection</span>
+                </div>
+                <div class="violation-score-container" style="flex:1;max-width:120px;margin-left:16px;display:flex;flex-direction:column;">
+                    <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
+                        <div style="width:${pct}%;height:100%;background:var(--primary);border-radius:3px;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-muted);">
+                        <span>Conf.</span><strong>${pct}%</strong>
+                    </div>
+                </div>`;
+            listEl.appendChild(item);
+        });
+    }
+
+    // 4. EVIDENCE RECORD SUMMARY
+    if (data.annotatedImagePath || data.mediaPath) {
+        const evidenceHeader = document.createElement('div');
+        evidenceHeader.style.cssText = 'font-size:0.75rem;font-weight:700;color:var(--text-main);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.5px;';
+        evidenceHeader.innerHTML = '<span>📸 Evidence Audit Record</span>';
+        listEl.appendChild(evidenceHeader);
+
+        const evidenceBox = document.createElement('div');
+        evidenceBox.style.cssText = 'padding:8px 12px;background:#f8fafc;border:1px solid var(--border-color);border-radius:6px;margin-bottom:12px;font-size:0.75rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;word-break:break-all;';
+        evidenceBox.innerHTML = `
+            <div><strong>Upload:</strong> <code>${data.mediaPath || '-'}</code></div>
+            <div><strong>Annotated:</strong> <code>${data.annotatedImagePath || '-'}</code></div>
+            <div><strong>Plate Crop:</strong> <code>${data.plate || 'NOT_DETECTED'}</code> (${data.ocrConfidence ? `${data.ocrConfidence}% OCR` : 'No OCR'})</div>
+        `;
+        listEl.appendChild(evidenceBox);
+    }
+
     // Review action buttons (Confirm / Reject violation in backend)
     const reviewPanel = document.getElementById('reviewActionPanel');
-    if (reviewPanel && state.lastViolationDbId) {
-        reviewPanel.style.display = 'flex';
-        document.getElementById('btnConfirmViolation').onclick = () => confirmViolation(state.lastViolationDbId, data);
-        document.getElementById('btnRejectViolation').onclick = () => rejectViolation(state.lastViolationDbId);
+    if (reviewPanel) {
+        if (state.lastViolationDbId) {
+            reviewPanel.style.display = 'flex';
+            document.getElementById('btnConfirmViolation').onclick = () => confirmViolation(state.lastViolationDbId, data);
+            document.getElementById('btnRejectViolation').onclick = () => rejectViolation(state.lastViolationDbId);
+        } else {
+            reviewPanel.style.display = 'none';
+        }
     }
 
     // Challan generation button
     const challanBtn = document.getElementById('btnOpenChallan');
-    if (fineSum > 0) {
-        challanBtn.style.display = 'flex';
-        challanBtn.innerHTML = `<span>Generate E-Challan (₹${fineSum})</span>`;
-        challanBtn.onclick = () => openChallanModal(data, fineSum);
-    } else {
-        challanBtn.style.display = 'none';
+    if (challanBtn) {
+        if (fineSum > 0) {
+            challanBtn.style.display = 'flex';
+            challanBtn.innerHTML = `<span>Generate E-Challan (₹${fineSum})</span>`;
+            challanBtn.onclick = () => openChallanModal(data, fineSum);
+        } else {
+            challanBtn.style.display = 'none';
+        }
     }
 
-    emptyDetails.style.display = 'none';
-    detailsContent.style.display = 'flex';
+    // Unhide details panel and hide empty state
+    if (emptyDetails) emptyDetails.style.display = 'none';
+    if (detailsContent) detailsContent.style.display = 'flex';
 }
 
 // ====================================================================
@@ -694,25 +944,99 @@ function resetWorkspace() {
     document.querySelectorAll('.sample-card').forEach(c => c.classList.remove('active'));
 }
 
-function isTrafficImage(filename) {
-    if (!filename) return true;
-    const keywords = ['car', 'bike', 'truck', 'traffic', 'road', 'street', 'highway', 'vehicle', 'plate', 'signal', 'helmet', 'riding', 'parking', 'violation', 'speed', 'accident', 'motorcycle', 'scooter', 'intersection', 'junction'];
-    return keywords.some(kw => filename.toLowerCase().includes(kw));
+function displayAnalysisError(errorMessage) {
+    const detailsContent = document.getElementById('detailsContent');
+    const emptyDetails = document.getElementById('emptyDetails');
+
+    emptyDetails.style.display = 'flex';
+    detailsContent.style.display = 'none';
+    emptyDetails.innerHTML = `
+        <div style="padding:24px 16px;text-align:center;color:var(--color-danger);display:flex;flex-direction:column;align-items:center;">
+            <svg style="width:36px;height:36px;margin-bottom:12px;stroke:var(--color-danger);fill:none;" viewBox="0 0 24 24" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h4 style="font-size:0.95rem;margin-bottom:6px;font-weight:700;color:var(--text-main);">Backend Analysis Failed</h4>
+            <p style="font-size:0.75rem;color:var(--text-muted);max-width:280px;line-height:1.4;">${errorMessage || 'Could not connect to backend server.'}</p>
+        </div>`;
 }
 
-function generateCustomMockDetection(filename) {
-    if (!isTrafficImage(filename)) return { title: 'Non-Traffic Scene Detected', isNonTraffic: true, plate: '-', ocrConfidence: 0, location: '-', speed: '-', violations: [] };
-    const plates = ['KA-03-MM-7721', 'KA-01-AB-1234', 'KA-05-XY-5678', 'KA-51-NB-1090'];
-    const locations = ['Koramangala 80 Ft Road', 'Silk Board Junction', 'Marathahalli Bridge', 'MG Road'];
-    return {
-        title: 'No Helmet Rider Detection', plate: plates[Math.floor(Math.random() * plates.length)],
-        ocrConfidence: Math.floor(Math.random() * 18) + 75, location: locations[Math.floor(Math.random() * locations.length)],
-        speed: `${Math.floor(Math.random() * 45) + 35} km/h`, vehicle: 'Vehicle Class - Regular',
-        violations: [
-            { label: 'Two-Wheeler', offense: 'No Helmet Rider', confidence: 0.88, severity: 'high', fine: 500, box: { x: 30, y: 15, w: 40, h: 70 } },
-            { label: 'License Plate', confidence: 0.93, severity: 'none', box: { x: 47, y: 73, w: 6, h: 3 } }
-        ]
-    };
+function displayVideoSummary(result) {
+    const detailsContent = document.getElementById('detailsContent');
+    const emptyDetails = document.getElementById('emptyDetails');
+    const titleEl = document.getElementById('detailTitle');
+    const listEl = document.getElementById('detailViolationsList');
+    const locationEl = document.getElementById('detailLocation');
+    const speedEl = document.getElementById('detailSpeed');
+    const plateEl = document.getElementById('detailPlate');
+    const plateConfidenceEl = document.getElementById('detailPlateConfidence');
+    const statusTextEl = document.getElementById('inferenceStatusText');
+    const statusBadgeEl = document.getElementById('inferenceStatusBadge');
+    const nonTrafficAlertEl = document.getElementById('nonTrafficAlert');
+
+    nonTrafficAlertEl.style.display = 'none';
+    statusTextEl.textContent = 'VIDEO SURVEILLANCE PROCESSED';
+    statusBadgeEl.className = 'inference-badge badge-confirmed';
+
+    titleEl.textContent = `Video Analysis (${result.vehicles_tracked_count} Vehicles Tracked)`;
+    if (locationEl) locationEl.textContent = 'Traffic Video Stream';
+    if (speedEl) speedEl.textContent = `${result.duration_seconds}s (${result.total_frames_read} frames @ ${Math.round(result.fps)} FPS)`;
+
+    const firstViol = (result.violations || [])[0];
+    const firstPlate = firstViol?.license_plate || 'NOT_DETECTED';
+    if (plateEl) plateEl.textContent = firstPlate;
+    if (plateConfidenceEl) plateConfidenceEl.textContent = firstViol && firstPlate !== 'NOT_DETECTED' ? 'Track Verified' : '-';
+
+    const perfBadge = document.getElementById('performanceBadge');
+    if (perfBadge && result.processing_time_ms) {
+        perfBadge.textContent = `⚡ ${Math.round(result.processing_time_ms)}ms`;
+    }
+
+    listEl.innerHTML = '';
+    const violations = result.violations || [];
+    let fineSum = 0;
+
+    if (violations.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-details-msg" style="padding:16px;border:1px dashed var(--border-color);border-radius:6px;margin-bottom:12px;">
+                <p style="font-size:0.8rem;color:var(--text-muted);">No traffic violations detected across ${result.processed_frames_count} sampled frames (${result.vehicles_tracked_count} vehicle(s) tracked).</p>
+            </div>`;
+    } else {
+        violations.forEach(v => {
+            const pct = Math.round(v.confidence * 100);
+            const fine = v.violation_type === 'TRIPLE_RIDING' ? 1000 : 500;
+            fineSum += fine;
+            const item = document.createElement('div');
+            item.className = 'violation-detail-item';
+            item.innerHTML = `
+                <div class="violation-type-label">
+                    <span class="violation-name">Track #${v.track_id}: ${v.violation_type.replace(/_/g, ' ')}</span>
+                    <span class="violation-severity high">Plate: ${v.license_plate}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);display:block;margin-top:2px;">${v.reason || ''}</span>
+                </div>
+                <div class="violation-score-container" style="flex:1;max-width:120px;margin-left:16px;display:flex;flex-direction:column;">
+                    <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
+                        <div style="width:${pct}%;height:100%;background:var(--color-danger);border-radius:3px;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-muted);">
+                        <span>Conf.</span><strong>${pct}%</strong>
+                    </div>
+                </div>`;
+            listEl.appendChild(item);
+        });
+    }
+
+    const challanBtn = document.getElementById('btnOpenChallan');
+    if (fineSum > 0) {
+        challanBtn.style.display = 'flex';
+        challanBtn.innerHTML = `<span>Generate E-Challan (₹${fineSum}) [DEMO]</span>`;
+    } else {
+        challanBtn.style.display = 'none';
+    }
+
+    emptyDetails.style.display = 'none';
+    detailsContent.style.display = 'flex';
 }
 
 // ====================================================================
@@ -726,23 +1050,85 @@ function initModal() {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('active'); });
 }
 
+function initAuth() {
+    const btnLoginOpen = document.getElementById('btnLoginOpen');
+    const loginModal = document.getElementById('loginModal');
+    const closeBtn = document.getElementById('closeLoginModalBtn');
+    const loginForm = document.getElementById('loginForm');
+    const btnLogout = document.getElementById('btnLogout');
+    const userInfoBadge = document.getElementById('userInfoBadge');
+    const userGreeting = document.getElementById('userGreeting');
+
+    const updateAuthUI = () => {
+        const user = TrafficEyeAPI.getStoredUser();
+        if (user && user.username) {
+            if (btnLoginOpen) btnLoginOpen.style.display = 'none';
+            if (userInfoBadge) userInfoBadge.style.display = 'flex';
+            if (userGreeting) userGreeting.textContent = `👤 ${user.username} (${user.role || 'Officer'})`;
+        } else {
+            if (btnLoginOpen) btnLoginOpen.style.display = 'inline-flex';
+            if (userInfoBadge) userInfoBadge.style.display = 'none';
+        }
+    };
+
+    if (btnLoginOpen && loginModal) {
+        btnLoginOpen.addEventListener('click', () => loginModal.classList.add('active'));
+    }
+    if (closeBtn && loginModal) {
+        closeBtn.addEventListener('click', () => loginModal.classList.remove('active'));
+    }
+    if (loginModal) {
+        loginModal.addEventListener('click', e => { if (e.target === loginModal) loginModal.classList.remove('active'); });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usernameInput = document.getElementById('loginUsername');
+            const passwordInput = document.getElementById('loginPassword');
+            const u = usernameInput ? usernameInput.value.trim() : '';
+            const p = passwordInput ? passwordInput.value : '';
+
+            try {
+                const data = await TrafficEyeAPI.login(u, p);
+                loginModal.classList.remove('active');
+                updateAuthUI();
+                showToast('Authentication Successful', `Logged in as ${data.username} (${data.role}).`);
+            } catch (err) {
+                showToast('Login Failed', err.message || 'Invalid username or password', 'error');
+            }
+        });
+    }
+
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            TrafficEyeAPI.logout();
+            updateAuthUI();
+            showToast('Logged Out', 'Officer session cleared.', 'info');
+        });
+    }
+
+    updateAuthUI();
+}
+
 function openChallanModal(data, totalFine) {
     const overlay = document.getElementById('challanModal');
     let existing = state.challans.find(c => c.plate === data.plate && c.fine === totalFine);
     if (!existing) {
-        const violationsNames = data.violations.filter(v => v.severity !== 'none').map(v => v.offense || v.label).join(', ');
+        const violationsNames = (data.violations || []).filter(v => v.severity !== 'none').map(v => v.offense || v.label).join(', ');
         existing = {
-            id: `BTP-CH-${Date.now()}`,
-            plate: data.plate || 'KA-03-MQ-4820',
-            offense: violationsNames,
-            location: data.location,
+            id: `TX-CH-${Date.now().toString().slice(-6)}`,
+            plate: data.plate || 'UNREADABLE',
+            offense: violationsNames || 'Traffic Infraction',
+            location: data.location || 'Camera Zone',
             timestamp: new Date().toLocaleString('en-IN', { hour12: false }),
             fine: totalFine,
             status: 'dispatched',
-            owner: data.owner || 'Registered Owner',
+            owner: data.owner || 'Registered Owner [DEMO]',
             vehicle: data.vehicle || 'Vehicle',
-            ownerPhone: data.ownerPhone || '+91 98765 43210',
-            ocrConfidence: data.ocrConfidence || 88
+            ownerPhone: data.ownerPhone || 'Not Configured',
+            ocrConfidence: data.ocrConfidence || 0,
+            evidenceImage: data.evidenceImage || null
         };
         state.challans.push(existing);
         state.dashboardStats.generatedChallans = state.challans.length;
@@ -762,28 +1148,24 @@ function openChallanModal(data, totalFine) {
 
     const modalImg = document.getElementById('mSnapshotImg');
     if (modalImg) {
-        modalImg.src = state.activeDetectionKey ? sampleDetections[state.activeDetectionKey]?.imagePath : 'images/samples/no_helmet.png';
+        modalImg.src = existing.evidenceImage || (state.activeDetectionKey ? sampleCards[state.activeDetectionKey]?.imagePath : '') || (state.lastInferenceData?.evidenceImage || 'images/samples/no_helmet.png');
     }
 
     document.getElementById('btnPayChallan').onclick = async () => {
-        if (state.backendOnline) {
-            // Try to find in backend challans by registration number
+        if (state.backendOnline && existing.backendId) {
             try {
-                const challans = await TrafficEyeAPI.getChallans(null, existing.plate.replace(/-/g, '').substring(0, 8));
-                if (challans && challans.length > 0) {
-                    await TrafficEyeAPI.payChallan(challans[0].id);
-                }
+                await TrafficEyeAPI.payChallan(existing.backendId);
             } catch (_) {}
         }
         existing.status = 'paid';
-        showToast('Payment Successful', `Challan ${existing.id} has been paid and cleared.`);
+        showToast('Payment Recorded [DEMO]', `Challan ${existing.id} settled in demo ledger.`);
         overlay.classList.remove('active');
         renderChallanLedger();
     };
 
     document.getElementById('btnDispatchSMS').onclick = () => {
         existing.status = 'dispatched';
-        showToast('E-Challan Dispatched', `Notification sent to ${existing.ownerPhone}.`);
+        showToast('SMS Notice Dispatched [DEMO]', `Simulated notification sent to ${existing.ownerPhone} (Demo Gateway).`);
         overlay.classList.remove('active');
         renderChallanLedger();
     };
@@ -834,10 +1216,10 @@ async function renderChallanLedger() {
                     timestamp: new Date(c.issued_at).toLocaleString('en-IN', { hour12: false }),
                     fine: c.fine_amount,
                     status: c.status.toLowerCase(),
-                    owner: 'Registered Owner',
+                    owner: 'Registered Owner [DEMO]',
                     vehicle: 'Vehicle',
-                    ownerPhone: '+91 98765 43210',
-                    ocrConfidence: 88,
+                    ownerPhone: 'Not Configured',
+                    ocrConfidence: 0,
                     backendId: c.id
                 }));
                 // Merge local-only challans not yet in backend

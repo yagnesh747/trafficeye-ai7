@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="TrafficEye - Automated Municipal Traffic Violation Enforcement System. Bengaluru Traffic Police Hackathon Prototype.">
-    <title>TrafficEye - Bengaluru Traffic Police Enforcement System</title>
+    <meta name="description" content="TrafficEye - Automated Municipal Traffic Violation Enforcement System Prototype.">
+    <title>TrafficEye AI - Traffic Violation Enforcement Prototype</title>
     <!-- CSS stylesheet -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2">
     <!-- ChartJS library for statistics rendering -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tesseract.js library for license plate OCR -->
@@ -25,7 +25,7 @@
                         <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"></path>
                     </svg>
                 </div>
-                <div class="logo-text">TrafficEye BTP</div>
+                <div class="logo-text">TrafficEye AI</div>
             </div>
             
             <nav class="sidebar-nav">
@@ -54,7 +54,7 @@
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
-                    <span>E-Challan Management</span>
+                    <span>E-Challan Portal [DEMO]</span>
                 </div>
             </nav>
             
@@ -74,9 +74,26 @@
             <header class="app-header">
                 <div class="header-title">
                     <h1 id="viewTitle">Traffic Enforcement Dashboard</h1>
-                    <p id="viewSubtitle">Bengaluru City Municipal Enforcement Analytics & Oversight Console.</p>
+                    <p id="viewSubtitle">Municipal Enforcement Analytics &amp; Oversight Console (Prototype).</p>
                 </div>
-                <div class="header-actions">
+                <div class="header-actions" style="display: flex; align-items: center; gap: 12px;">
+                    <button id="themeToggleBtn" class="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme">
+                        <span id="themeToggleIcon">🌙</span>
+                        <span id="themeToggleLabel">Dark</span>
+                    </button>
+                    <div id="authContainer" style="display: flex; align-items: center; gap: 8px;">
+                        <button id="btnLoginOpen" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; cursor: pointer;">
+                            Officer Login
+                        </button>
+                        <div id="userInfoBadge" style="display: none; align-items: center; gap: 8px; font-size: 0.82rem; background: var(--bg-card, #ffffff); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <span id="userGreeting" style="font-weight: 500;">👤 admin</span>
+                            <button id="btnLogout" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.75rem; text-decoration: underline; padding: 0 4px;">Logout</button>
+                        </div>
+                    </div>
+                    <div class="status-badge-pill">
+                        <span class="pulse-dot" style="width: 8px; height: 8px;"></span>
+                        <span>ML BACKEND CONNECTED</span>
+                    </div>
                     <div class="time-display" id="currentTime">00:00:00 | 15-JUN-2026</div>
                 </div>
             </header>
@@ -89,8 +106,8 @@
                     <div class="glass kpi-card">
                         <div class="kpi-info">
                             <h3>Violations Detected Today</h3>
-                            <div class="kpi-value" id="violationsDetectedTodayEl">142</div>
-                            <span class="kpi-trend down">✓ System Monitored</span>
+                            <div class="kpi-value" id="violationsDetectedTodayEl">--</div>
+                            <span class="kpi-trend down">✓ Live DB Total</span>
                         </div>
                         <div class="kpi-icon-container">
                             <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
@@ -104,7 +121,7 @@
                     <div class="glass kpi-card severity-warning">
                         <div class="kpi-info">
                             <h3>Active Cases</h3>
-                            <div class="kpi-value" id="activeCasesEl">48</div>
+                            <div class="kpi-value" id="activeCasesEl">--</div>
                             <span class="kpi-trend up">⚠ Awaiting Review</span>
                         </div>
                         <div class="kpi-icon-container">
@@ -120,8 +137,8 @@
                     <div class="glass kpi-card severity-success">
                         <div class="kpi-info">
                             <h3>Generated E-Challans</h3>
-                            <div class="kpi-value" id="generatedChallansEl">94</div>
-                            <span class="kpi-trend neutral">✉ Dispatched via SMS</span>
+                            <div class="kpi-value" id="generatedChallansEl">--</div>
+                            <span class="kpi-trend neutral">✉ Demo Dispatched</span>
                         </div>
                         <div class="kpi-icon-container">
                             <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
@@ -134,8 +151,8 @@
                     <div class="glass kpi-card severity-high">
                         <div class="kpi-info">
                             <h3>Average Detection Confidence</h3>
-                            <div class="kpi-value" id="avgConfidenceEl">84.6%</div>
-                            <span class="kpi-trend neutral">🎯 Verified Range</span>
+                            <div class="kpi-value" id="avgConfidenceEl">--</div>
+                            <span class="kpi-trend neutral">🎯 Real Model Score</span>
                         </div>
                         <div class="kpi-icon-container">
                             <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" stroke-width="2">
@@ -168,7 +185,6 @@
                     </div>
                 </div>
                 
-                <!-- Recent violations list table -->
                 <div class="glass table-card">
                     <div class="table-header">
                         <h2>Recent Auto-Detected Incidents</h2>
@@ -177,47 +193,16 @@
                         <table class="custom-table">
                             <thead>
                                 <tr>
-                                    <th>Challan ID</th>
+                                    <th>Incident ID</th>
                                     <th>Vehicle Number</th>
                                     <th>Violation Category</th>
                                     <th>Location</th>
-                                    <th>Fine Amt</th>
+                                    <th>Confidence</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>TX-2026-8812</strong></td>
-                                    <td>KA-03-MQ-4820</td>
-                                    <td>No Helmet</td>
-                                    <td>Koramangala 80 Ft Road</td>
-                                    <td>₹500</td>
-                                    <td><span class="badge badge-danger">Unpaid</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>TX-2026-8794</strong></td>
-                                    <td>KA-01-AB-9031</td>
-                                    <td>Triple Riding</td>
-                                    <td>Silk Board Junction</td>
-                                    <td>₹1,000</td>
-                                    <td><span class="badge badge-danger">Unpaid</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>TX-2026-8744</strong></td>
-                                    <td>KA-03-MM-7721</td>
-                                    <td>Wrong Parking</td>
-                                    <td>MG Road</td>
-                                    <td>₹500</td>
-                                    <td><span class="badge badge-success">Paid</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>TX-2026-8691</strong></td>
-                                    <td>KA-05-ND-5512</td>
-                                    <td>Signal Jumping</td>
-                                    <td>Marathahalli Bridge</td>
-                                    <td>₹1,000</td>
-                                    <td><span class="badge badge-warning">Dispatched</span></td>
-                                </tr>
+                            <tbody id="recentIncidentsTableBody">
+                                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Connecting to database...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -461,7 +446,7 @@
                 <!-- Ledger list table -->
                 <div class="glass table-card">
                     <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                        <h2>Official E-Challan Registry Ledger</h2>
+                        <h2>E-Challan Registry Ledger [DEMO]</h2>
                         
                         <!-- Search & Filter Controls -->
                         <div class="ledger-controls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
@@ -517,8 +502,8 @@
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </div>
-                <h2>OFFICIAL E-CHALLAN VIOLATION REPORT</h2>
-                <p>Bengaluru Traffic Police, Government of Karnataka</p>
+                <h2>E-CHALLAN VIOLATION REPORT [DEMO]</h2>
+                <p>TrafficEye Enforcement Prototype — Simulated Dispatch Ledger</p>
                 <div style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; letter-spacing: 2px;">
                     ||||||| | ||||| || |||||| | |||
                 </div>
@@ -550,30 +535,29 @@
                     <span class="challan-val" id="mOffenseLocation">-</span>
                 </div>
                 <div class="challan-row">
-                    <span class="challan-label">Offenses Flagged</span>
+                    <span class="challan-label">Violation Offense</span>
                     <span class="challan-val" id="mOffenseType">-</span>
                 </div>
-                <div class="challan-row" style="border-top: 1px dashed rgba(0,0,0,0.15); margin-top: 8px; padding-top: 14px;">
-                    <span class="challan-label" style="font-weight: 700; color: var(--text-main);">TOTAL FINE DUE</span>
-                    <span class="challan-val highlight-danger" id="mFineAmount">₹0</span>
+                <div class="challan-row">
+                    <span class="challan-label">Fine Levied</span>
+                    <span class="challan-val" id="mFineAmount" style="color: var(--color-danger); font-size: 1.1rem;">₹0</span>
                 </div>
-            </div>
-            
-            <div class="challan-snapshot">
-                <div class="challan-snapshot-title">Visual Evidence Clip</div>
-                <div class="challan-snapshot-img-wrapper">
-                    <img id="mSnapshotImg" src="images/samples/no_helmet.png" alt="Violation Evidence Snapshot">
+                <div class="challan-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <span class="challan-label">Photographic Evidence</span>
+                    <div style="width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); max-height: 180px;">
+                        <img id="mSnapshotImg" src="images/samples/no_helmet.png" alt="Violation Evidence" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
                 </div>
             </div>
             
             <div class="challan-footer">
                 <button class="btn btn-primary" id="btnDispatchSMS" style="flex: 1;">
                     <svg style="width:18px;height:18px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    <span>Dispatch SMS Notice</span>
+                    <span>Dispatch SMS [DEMO]</span>
                 </button>
                 <button class="btn btn-secondary" id="btnPayChallan" style="flex: 1;">
                     <svg style="width:18px;height:18px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                    <span>Settle Challan (₹)</span>
+                    <span>Settle Challan [DEMO]</span>
                 </button>
             </div>
         </div>
@@ -593,8 +577,32 @@
         </div>
     </div>
     
+    <!-- Officer Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-card" style="max-width: 400px; width: 90%;">
+            <div class="modal-header">
+                <h3>Enforcement Officer Login</h3>
+                <button class="modal-close" id="closeLoginModalBtn">&times;</button>
+            </div>
+            <form id="loginForm" style="display: flex; flex-direction: column; gap: 14px; padding: 18px 0 8px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Username</label>
+                    <input type="text" id="loginUsername" value="admin" required style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Password</label>
+                    <input type="password" id="loginPassword" value="admin123" required style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">Default credentials: <code>admin / admin123</code> or <code>operator / operator123</code></div>
+                <button type="submit" class="btn btn-primary" style="padding: 10px; font-weight: 600; border-radius: 6px; cursor: pointer; justify-content: center; margin-top: 4px;">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <!-- API Client & Application Logic -->
-    <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/api.js?v=2"></script>
+    <script src="js/app.js?v=2"></script>
 </body>
 </html>
