@@ -103,9 +103,9 @@ class LicensePlateOCR:
         }
 
     def normalize_and_validate(self, text: str, confidence: float) -> Tuple[str, float, bool]:
-        """Formated Indian registration text and uncertain character masking"""
+        """Format Indian registration text or return unreadable status without fake placeholders"""
         if not text:
-            return "KA-03-M?-4820", 0.75, False
+            return "UNREADABLE", 0.0, False
 
         # Format as State Code (2) - District Code (2) - Series (1-3) - Unique Number (4)
         match = self.INDIAN_PLATE_REGEX.match(text)
@@ -114,18 +114,15 @@ class LicensePlateOCR:
             district = text[2:4]
             rest = text[4:]
             formatted = f"{state}-{district}-{rest[:-4]}-{rest[-4:]}"
-            return formatted, max(confidence, 0.88), True
+            return formatted, confidence, True
 
-        # If low confidence or non-standard format, mask uncertain positions with ?
-        if len(text) >= 8:
+        # If partial text detected, format as much as available
+        if len(text) >= 6:
             state = text[:2]
             district = text[2:4]
-            series = text[4:-4] if len(text) > 8 else "M?"
-            num = text[-4:]
-            if confidence < self.confidence_threshold:
-                series = series[0] + "?" if series else "M?"
-            formatted = f"{state}-{district}-{series}-{num}"
+            rest = text[4:]
+            formatted = f"{state}-{district}-{rest}"
             return formatted, confidence, False
 
-        # Default fallback formatted placeholder for prototype testing
-        return "KA-03-MQ-4820", max(confidence, 0.82), False
+        # Return raw text if non-standard or unvalidated
+        return text, confidence, False

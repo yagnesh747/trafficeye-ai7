@@ -59,7 +59,7 @@ def confirm_violation(
     # Generate MOCK E-Challan automatically on confirmation if not already created
     existing_challan = db.query(Challan).filter(Challan.violation_id == violation_id).first()
     if not existing_challan:
-        reg = violation.vehicle.registration_number if violation.vehicle else "KA-03-MQ-4820"
+        reg = (violation.vehicle.registration_number if violation.vehicle and violation.vehicle.registration_number else "UNREGISTERED")
         
         # Fine calculation lookup based on Motor Vehicles Act schedule
         fine_map = {

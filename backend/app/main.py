@@ -3,7 +3,6 @@ import logging
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.app.config import settings
@@ -47,12 +46,9 @@ app.include_router(analytics_router, prefix=settings.API_V1_STR)
 os.makedirs(settings.UPLOAD_DIRECTORY, exist_ok=True)
 os.makedirs(settings.EVIDENCE_DIRECTORY, exist_ok=True)
 
-# Mount static directories
+# Mount uploads and evidence as static directories
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIRECTORY), name="uploads")
 app.mount("/evidence", StaticFiles(directory=settings.EVIDENCE_DIRECTORY), name="evidence")
-
-if os.path.exists("frontend"):
-    app.mount("/static", StaticFiles(directory="frontend"), name="frontend_static")
 
 @app.get("/health")
 def health_check():
@@ -63,13 +59,12 @@ def health_check():
         "environment": settings.ENVIRONMENT
     }
 
-@app.get("/")
-def read_root():
-    # Serve index.html from frontend if exists
-    frontend_index = os.path.join("frontend", "index.html")
-    if os.path.exists(frontend_index):
-        return FileResponse(frontend_index)
-    return {"message": "TrafficEye AI Backend Server Online. Visit /docs for API Swagger documentation."}
+# Mount the frontend LAST so all API routes take priority.
+# html=True makes StaticFiles serve index.html for / automatically.
+# Relative paths (css/style.css, js/app.js) in the HTML will resolve correctly.
+if os.path.exists("frontend"):
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
 
 @app.on_event("startup")
 def startup_db_seed():
@@ -100,82 +95,9 @@ def startup_db_seed():
             )
             db.add(op_user)
 
-        # Seed sample seed violations if database is empty
-        if db.query(Violation).count() == 0:
-            logger.info("Seeding baseline initial violations into database...")
-            
-            # Seed 1: No Helmet
-            v1_vehicle = Vehicle(registration_number="KA-03-MQ-4820", vehicle_type="Two-Wheeler", owner_name="Rahul A. Sharma", owner_phone="+91 98765 43210")
-            db.add(v1_vehicle)
-            db.flush()
-            
-            v1 = Violation(
-                violation_uuid="v-seed-001",
-                vehicle_id=v1_vehicle.id,
-                violation_type=ViolationType.NO_HELMET,
-                violation_confidence=0.92,
-                status=ViolationStatus.PENDING_REVIEW,
-                location_name="Koramangala 80 Ft Road"
-            )
-            db.add(v1)
-            db.flush()
-            
-            e1 = Evidence(
-                violation_id=v1.id,
-                original_image_path="frontend/images/samples/no_helmet.png",
-                annotated_image_path="frontend/images/samples/no_helmet.png",
-                plate_crop_path="frontend/images/samples/no_helmet.png",
-                vehicle_bbox_json='{"x":29,"y":32,"w":37,"h":56}',
-                plate_bbox_json='{"x":33,"y":70,"w":8,"h":5}',
-                raw_ocr_text="KA03MQ4820",
-                normalized_plate_text="KA-03-MQ-4820",
-                ocr_confidence=0.88
-            )
-            db.add(e1)
-
-            # Seed 2: Triple Riding
-            v2_vehicle = Vehicle(registration_number="KA-01-AB-9031", vehicle_type="Two-Wheeler", owner_name="Vikram Singh", owner_phone="+91 87654 32109")
-            db.add(v2_vehicle)
-            db.flush()
-            
-            v2 = Violation(
-                violation_uuid="v-seed-002",
-                vehicle_id=v2_vehicle.id,
-                violation_type=ViolationType.TRIPLE_RIDING,
-                violation_confidence=0.89,
-                status=ViolationStatus.CONFIRMED,
-                location_name="Silk Board Junction"
-            )
-            db.add(v2)
-            db.flush()
-            
-            e2 = Evidence(
-                violation_id=v2.id,
-                original_image_path="frontend/images/samples/triple_riding.png",
-                annotated_image_path="frontend/images/samples/triple_riding.png",
-                plate_crop_path="frontend/images/samples/triple_riding.png",
-                vehicle_bbox_json='{"x":36,"y":39,"w":33,"h":44}',
-                plate_bbox_json='{"x":39,"y":69,"w":4,"h":3}',
-                raw_ocr_text="KA01AB9031",
-                normalized_plate_text="KA-01-AB-9031",
-                ocr_confidence=0.79
-            )
-            db.add(e2)
-
-            ch2 = Challan(
-                challan_number="BTP-CH-100201",
-                violation_id=v2.id,
-                vehicle_id=v2_vehicle.id,
-                vehicle_registration="KA-01-AB-9031",
-                violation_type=ViolationType.TRIPLE_RIDING,
-                fine_amount=1000,
-                status=ChallanStatus.DISPATCHED
-            )
-            db.add(ch2)
-
         db.commit()
     except Exception as e:
-        logger.error(f"Error seeding database: {e}")
+        logger.error(f"Error seeding user accounts: {e}")
         db.rollback()
     finally:
         db.close()

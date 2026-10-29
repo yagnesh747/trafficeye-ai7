@@ -8,9 +8,19 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.models import Detection
-from backend.app.services.detection_service import process_image_file
+from backend.app.services.detection_service import process_image_file, process_video_file
 
 router = APIRouter(tags=["Detections & Analysis"])
+
+import logging
+
+logger = logging.getLogger("trafficeye.detections")
+
+ALLOWED_SAMPLE_TAGS = {"no_helmet", "triple_riding", "wrong_parking", "signal_jumping"}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
+MAX_IMAGE_SIZE = 15 * 1024 * 1024     # 15 MB
+MAX_VIDEO_SIZE = 100 * 1024 * 1024   # 100 MB
 
 @router.post("/analyze/image")
 async def analyze_image(
@@ -23,22 +33,50 @@ async def analyze_image(
         raise HTTPException(status_code=400, detail="Either an image file or a sample_tag must be provided.")
 
     if sample_tag:
-        # Load sample image from frontend assets
+        if sample_tag not in ALLOWED_SAMPLE_TAGS:
+            raise HTTPException(status_code=400, detail="Invalid sample_tag specified.")
+
         sample_path = os.path.join("frontend", "images", "samples", f"{sample_tag}.png")
         if not os.path.exists(sample_path):
             sample_path = os.path.join("frontend", "images", "samples", "no_helmet.png")
 
-        if os.path.exists(sample_path):
+        if not os.path.exists(sample_path):
+            raise HTTPException(status_code=404, detail="Sample image asset not found.")
+
+        try:
             with open(sample_path, "rb") as f:
                 image_bytes = f.read()
             return process_image_file(db, image_bytes, f"{sample_tag}.png", sample_tag=sample_tag)
+        except Exception as e:
+            logger.error(f"Sample analysis error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to process sample image.")
 
-    # Process uploaded image file
+    # Validate file extension
+    raw_filename = os.path.basename(file.filename or "upload.jpg")
+    ext = os.path.splitext(raw_filename)[1].lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_IMAGE_EXTENSIONS))}"
+        )
+
+    # Read and validate file size
     contents = await file.read()
     if not contents:
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image file size exceeds maximum limit of {MAX_IMAGE_SIZE // (1024 * 1024)} MB."
+        )
 
-    return process_image_file(db, contents, file.filename or "upload.jpg")
+    try:
+        return process_image_file(db, contents, raw_filename)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Image analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal image analysis failed. Please check image format.")
 
 @router.post("/analyze/video")
 async def analyze_video(
@@ -46,45 +84,61 @@ async def analyze_video(
     frame_interval: int = Form(15),  # Process 1 frame every N frames
     db: Session = Depends(get_db)
 ):
-    """Extract frames from uploaded MP4 video and analyze traffic violations."""
-    if not file.filename.endswith(('.mp4', '.avi', '.mov', '.mkv')):
-        raise HTTPException(status_code=400, detail="Unsupported video format. Please upload MP4, AVI, or MOV.")
+    """Extract frames from uploaded traffic video and analyze traffic violations with tracking."""
+    raw_filename = os.path.basename(file.filename or "traffic_video.mp4")
+    ext = os.path.splitext(raw_filename)[1].lower()
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported video format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
+        )
 
-    # Save uploaded video to temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-        shutil.copyfileobj(file.file, tmp)
+    # Bound frame_interval safely
+    frame_interval = max(1, min(frame_interval, 120))
+
+    # Stream video to temporary file enforcing size limit
+    total_size = 0
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext or ".mp4") as tmp:
         tmp_path = tmp.name
-
-    try:
-        cap = cv2.VideoCapture(tmp_path)
-        frame_count = 0
-        analyzed_frames = []
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
+        chunk_size = 1024 * 1024  # 1MB
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
                 break
+            total_size += len(chunk)
+            if total_size > MAX_VIDEO_SIZE:
+                tmp.close()
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Video file size exceeds maximum limit of {MAX_VIDEO_SIZE // (1024 * 1024)} MB."
+                )
+            tmp.write(chunk)
 
-            if frame_count % frame_interval == 0:
-                is_success, buffer = cv2.imencode(".jpg", frame)
-                if is_success:
-                    res = process_image_file(db, buffer.tobytes(), f"video_frame_{frame_count}.jpg")
-                    analyzed_frames.append(res)
-
-            frame_count += 1
-            if len(analyzed_frames) >= 10:  # Cap at 10 processed frames per video request
-                break
-
-        cap.release()
-        return {
-            "status": "COMPLETED",
-            "total_frames_read": frame_count,
-            "processed_frames_count": len(analyzed_frames),
-            "frame_results": analyzed_frames
-        }
-    finally:
+    if total_size == 0:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+        raise HTTPException(status_code=400, detail="Empty video file uploaded.")
+
+    try:
+        result = process_video_file(
+            db=db,
+            video_path=tmp_path,
+            filename=raw_filename,
+            frame_interval=frame_interval,
+            max_frames=30
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Video analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process video stream. Verify video codec.")
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
 
 @router.get("/detections")
 def list_detections(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):

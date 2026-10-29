@@ -66,10 +66,61 @@ class TrafficEyeAPI {
         }
     }
 
+    static getToken() {
+        return localStorage.getItem('trafficeye_token');
+    }
+
+    static getAuthHeaders() {
+        const token = TrafficEyeAPI.getToken();
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    static async login(username, password) {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Authentication failed. Please verify credentials.');
+        }
+
+        const data = await res.json();
+        localStorage.setItem('trafficeye_token', data.access_token);
+        localStorage.setItem('trafficeye_user', JSON.stringify({
+            username: data.username,
+            role: data.role
+        }));
+        return data;
+    }
+
+    static logout() {
+        localStorage.removeItem('trafficeye_token');
+        localStorage.removeItem('trafficeye_user');
+    }
+
+    static getStoredUser() {
+        try {
+            const raw = localStorage.getItem('trafficeye_user');
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
     static async confirmViolation(violationId, editedPlateText = null) {
         const res = await fetch(`${API_BASE_URL}/violations/${violationId}/confirm`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...TrafficEyeAPI.getAuthHeaders()
+            },
             body: JSON.stringify({
                 status: 'CONFIRMED',
                 edited_plate_text: editedPlateText
@@ -83,7 +134,10 @@ class TrafficEyeAPI {
     static async rejectViolation(violationId, reason = null) {
         const res = await fetch(`${API_BASE_URL}/violations/${violationId}/reject`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...TrafficEyeAPI.getAuthHeaders()
+            },
             body: JSON.stringify({
                 status: 'REJECTED',
                 rejection_reason: reason
@@ -100,7 +154,9 @@ class TrafficEyeAPI {
             if (status) params.append('status', status);
             if (registration) params.append('registration', registration);
 
-            const res = await fetch(`${API_BASE_URL}/challans?${params.toString()}`);
+            const res = await fetch(`${API_BASE_URL}/challans?${params.toString()}`, {
+                headers: TrafficEyeAPI.getAuthHeaders()
+            });
             if (!res.ok) throw new Error('Failed to fetch challans');
             return await res.json();
         } catch (err) {
@@ -111,7 +167,8 @@ class TrafficEyeAPI {
 
     static async payChallan(challanId) {
         const res = await fetch(`${API_BASE_URL}/challans/${challanId}/pay`, {
-            method: 'POST'
+            method: 'POST',
+            headers: TrafficEyeAPI.getAuthHeaders()
         });
 
         if (!res.ok) throw new Error('Failed to settle challan');

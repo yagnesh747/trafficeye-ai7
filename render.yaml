@@ -3,7 +3,7 @@ services:
     name: trafficeye-ai
     env: docker
     dockerfilePath: Dockerfile
-    plan: standard
+    plan: free
     envVars:
       - key: ENVIRONMENT
         value: production

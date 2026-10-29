@@ -29,7 +29,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
     total_fines_levied = db.query(func.sum(Challan.fine_amount)).scalar() or 0
     total_fines_collected = db.query(func.sum(Challan.fine_amount)).filter(Challan.status == ChallanStatus.PAID).scalar() or 0
 
-    avg_conf = db.query(func.avg(Violation.violation_confidence)).scalar() or 0.89
+    avg_conf = db.query(func.avg(Violation.violation_confidence)).scalar() or 0.0
 
     # Category breakdown distribution
     dist_query = db.query(Violation.violation_type, func.count(Violation.id)).group_by(Violation.violation_type).all()
@@ -43,25 +43,21 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
         if v_type:
             dist_map[v_type.value if hasattr(v_type, 'value') else str(v_type)] = count
 
-    # Default baseline histogram if database is newly initialized
-    if sum(dist_map.values()) == 0:
-        dist_map = {
-            "NO_HELMET": 45,
-            "TRIPLE_RIDING": 28,
-            "WRONG_PARKING": 32,
-            "RED_LIGHT": 37
-        }
-
-    hourly = [4, 2, 1, 3, 5, 12, 28, 45, 62, 54, 48, 50, 42, 38, 55, 70, 85, 92, 78, 60, 40, 25, 15, 8]
+    # Hourly infractions based on actual database entries for today
+    hourly = [0] * 24
+    today_violations = db.query(Violation.timestamp).filter(Violation.timestamp >= today_start).all()
+    for (ts,) in today_violations:
+        if ts and 0 <= ts.hour < 24:
+            hourly[ts.hour] += 1
 
     return {
-        "violations_detected_today": max(display_today_count, 142),
-        "pending_reviews": pending_reviews,
-        "confirmed_violations": confirmed_violations,
-        "challans_generated": max(challans_generated, 84),
-        "total_fines_levied": max(total_fines_levied, 68000),
-        "total_fines_collected": max(total_fines_collected, 24500),
-        "average_confidence": round(float(avg_conf), 2),
+        "violations_detected_today": int(violations_detected_today),
+        "pending_reviews": int(pending_reviews),
+        "confirmed_violations": int(confirmed_violations),
+        "challans_generated": int(challans_generated),
+        "total_fines_levied": int(total_fines_levied or 0),
+        "total_fines_collected": int(total_fines_collected or 0),
+        "average_confidence": round(float(avg_conf), 2) if avg_conf else 0.0,
         "violation_distribution": dist_map,
         "hourly_infractions": hourly
     }

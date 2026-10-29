@@ -1,24 +1,31 @@
 # TrafficEye AI 🚦📸
-> **AI-Powered Traffic Violation Detection, License Plate Recognition & E-Challan Management System**
+> **AI-Powered Traffic Violation Detection, License Plate Recognition & E-Challan Management System (Engineering Prototype)**
 
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.14-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-1.17+-005CED?style=flat)](https://onnxruntime.ai)
 [![YOLOv8](https://img.shields.io/badge/Ultralytics-YOLOv8-00FFFF?style=flat)](https://ultralytics.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-TrafficEye AI is a production-grade full-stack engineering prototype designed for automated municipal traffic law enforcement, tailored for metropolitan traffic management authorities (e.g. **Bengaluru Traffic Police - BTP**). Integrating modern Computer Vision (YOLOv8 object detection), image preprocessing, and optical character recognition (OCR), the system processes roadside CCTV snapshots and video feeds to automatically detect infractions, recognize vehicle license plates, provide an operator verification portal, and manage digital citations (E-Challans).
+TrafficEye AI is a full-stack municipal traffic enforcement engineering prototype. Powered by genuine Computer Vision (YOLOv8 object detection, dedicated ONNX helmet detection, dedicated ONNX license plate localization, optical character recognition, and multi-frame IoU tracking), the system processes CCTV snapshots and video recordings to detect infractions, recognize license plates, assist operators with human-in-the-loop review, and manage digital citations.
+
+> [!IMPORTANT]
+> **DISCLAIMER: DEMO & PROTOTYPE ONLY**  
+> TrafficEye AI is an engineering and research prototype. **No real government vehicle registries (e.g. VAHAN / Parivahan), online banking payment gateways, or live SMS gateways are connected.** All e-challan dispatching, citation notifications, citizen phone numbers, and payment settlements in this application are simulated demonstrations clearly designated as **`[DEMO]`**.
 
 ---
 
-## 📌 Problem Statement
+## 📌 Project Overview & Problem Statement
 
-Rapid urbanization and expanding vehicle volume in metropolitan centers (e.g. Bengaluru, Silk Board Junction, Marathahalli) have made manual traffic policing unsustainable. Major safety infractions—specifically **riding without a helmet, triple riding, wrong parking in restricted zones, and signal jumping**—contribute to over 60% of urban traffic casualties and severe gridlock.
+Urban traffic congestion and safety non-compliance—especially **riding without a helmet, triple riding on two-wheelers, wrong parking, and signal jumping**—pose serious road safety hazards. Manual policing is difficult to scale across major arterial roads and complex junctions.
 
-**TrafficEye AI resolves this by:**
-1. **Automating Detection**: Using edge computer vision (YOLO) to continuously scan traffic streams and flag candidate infractions.
-2. **Standardizing Human Verification**: Providing an operator audit portal where human officers can confirm/reject candidate detections and verify OCR plate extraction.
-3. **Automating Citation Lifecycle**: Generating official-format digital E-Challans linked to vehicle databases with Motor Vehicles Act fine schedules.
+**TrafficEye AI demonstrates an automated solution:**
+1. **Edge Computer Vision Ingestion**: Ingests traffic snapshot images and video streams.
+2. **Multi-Stage Real ML Pipeline**: Detects vehicles/riders, performs dedicated helmet classification, localizes license plates with ONNX models, and performs OCR plate recognition.
+3. **Multi-Frame Video Tracking**: Tracks vehicles across sampled video frames using IoU tracking to eliminate duplicate counts and consolidate multi-frame evidence.
+4. **Human-in-the-Loop Audit Center**: Provides officers with an interactive portal to inspect candidate violations, bounding boxes, plate crops, and edit OCR text before confirming citations.
+5. **E-Challan Management Ledger [DEMO]**: Demonstrates statutory fine calculation (Motor Vehicles Act schedules) and digital citation workflows.
 
 ---
 
@@ -26,195 +33,210 @@ Rapid urbanization and expanding vehicle volume in metropolitan centers (e.g. Be
 
 ```mermaid
 graph TD
-    A[CCTV Snapshots / MP4 Feeds] --> B[FastAPI REST Ingestion API]
-    B --> C[YOLODetectionService Inference Engine]
-    C -->|Detect Bounding Boxes| D[ViolationEngine Rules Processor]
-    D -->|Crop Vehicle / Plate| E[OpenCV Image Preprocessor]
-    E --> F[LicensePlateOCR Engine]
-    F -->|Raw Text & Confidence| G[Plate Normalization & Regex Masking]
-    G --> H[SQLAlchemy PostgreSQL / SQLite DB]
-    H --> I[Traffic Violation Review Center]
-    I -->|Operator Audit: Confirm/Reject| J[Mock E-Challan Subsystem]
-    J --> K[E-Challan Management Ledger]
+    A[CCTV Snapshots / MP4 Videos] --> B[FastAPI REST API Ingestion]
+    B --> C[YOLOv8 Base Vehicle & Person Detector]
+    B --> D[YOLOv8n ONNX Helmet Detector]
+    C & D --> E[Violation Engine Rules & Association]
+    E --> F[YOLOv8 ONNX License Plate Detector]
+    F --> G[OpenCV Crop & OCR Engine]
+    G --> H[SQLAlchemy DB - SQLite / PostgreSQL]
+    H --> I[Officer Review & Audit Console]
+    I -->|Confirm Violation| J[E-Challan Ledger Subsystem [DEMO]]
+    J --> K[Simulated SMS & Payment Settlement [DEMO]]
 ```
 
 ---
 
 ## 🌟 Key Features
 
-### 1. Real-Time Computer Vision Pipeline
-- **Vehicle & Person Detection**: Detects motorcycles, cars, buses, trucks, pedestrians, and traffic lights using Ultralytics YOLOv8.
-- **Rule-Based Violation Engine**:
-  - **No Helmet Rider**: Detects two-wheelers and evaluates rider head region for protective helmet gear.
-  - **Triple Riding**: Identifies motorcycles carrying 3 or more occupants.
-  - **Wrong Parking Zone**: Evaluates stationary vehicle bounding boxes against configurable polygon ROI zones.
-  - **Signal Violation Framework**: Flags vehicles crossing stop lines while traffic signals are active red.
+### 1. Computer Vision & ML Pipeline
+- **Vehicle & Pedestrian Detection**: Real-time detection of cars, motorcycles, buses, trucks, and pedestrians using YOLOv8.
+- **Genuine Helmet Detection**: Dedicated YOLOv8n ONNX model identifying `With Helmet` vs `Without Helmet` with genuine composite confidence scores.
+- **Real Triple-Riding Detection**: Detects 3 or more persons associated with the same motorcycle based on spatial overlap and IoU bounds.
+- **Dedicated License Plate Localization**: Verified YOLOv8 ONNX plate detector running inference over vehicle ROIs.
+- **Optical Character Recognition (OCR)**: Extracts registration strings using PyTesseract / EasyOCR with regex normalization for Indian plate standards (e.g. `KA-03-AB-1234`).
+- **Multi-Frame Video Tracking**: Lightweight IoU tracker (`ai/tracking/tracker.py`) preserving vehicle identity across sampled frames to deduplicate violations.
 
-### 2. License Plate Extraction & OCR
-- **Plate Crop & Filtering**: Automatically crops plate regions and applies OpenCV grayscale conversion, bilateral filtering, CLAHE contrast enhancement, and Otsu thresholding.
-- **Indian Registration Format Validator**: Validates against Indian registration formats (`KA-03-MQ-4820`) and masks low-confidence characters with `?` (e.g. `KA-03-M?-4820`).
+### 2. Officer Audit & Review Center
+- Real-time display of detection bounding boxes, confidence values, plate crops, and violation tags.
+- Human-in-the-loop review actions (`CONFIRM`, `REJECT`) with plate text correction.
+- JWT-based authentication for enforcement officers.
 
-### 3. Human Verification & Audit Center
-- **Operator Review Portal**: Allows traffic auditing officers to view original evidence, bounding box overlays, confidence metrics, edit OCR plate strings, and mark violations as `CONFIRMED` or `REJECTED`.
-
-### 4. Mock E-Challan Ledger
-- **Automatic Citation Generation**: Instantly levies Motor Vehicles Act fines (No Helmet: ₹500, Triple Riding: ₹1,000, Wrong Parking: ₹500, Red Light: ₹1,000) upon operator confirmation.
-- **Fine Settlement Gateway**: Supports searching citations by plate string or status, and simulates instant fine settlement.
+### 3. E-Challan Ledger [DEMO]
+- Automated fine schedule mapping (Motor Vehicles Act):
+  - No Helmet: ₹500
+  - Triple Riding: ₹1,000
+  - Wrong Parking: ₹500
+  - Signal Jumping: ₹1,000
+- Simulated citation registry with status filtering (`Unpaid`, `Dispatched`, `Paid`).
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Python 3.11, FastAPI, Pydantic v2, SQLAlchemy ORM, SQLite / PostgreSQL.
-- **Computer Vision & ML**: PyTorch, Ultralytics YOLOv8, OpenCV (Headless), EasyOCR, PyTesseract.
-- **Frontend**: HTML5, Vanilla CSS3 (Slate-Gray Government Console Design), JavaScript (ES6+ API Client), Chart.js.
-- **Testing & Containerization**: Pytest, Docker, Docker Compose, Uvicorn.
+| Layer | Technology |
+|---|---|
+| **Backend Framework** | Python 3.11, FastAPI, Pydantic v2, Uvicorn |
+| **Database & ORM** | SQLAlchemy, SQLite (default) / PostgreSQL compatible |
+| **Authentication** | OAuth2 with JWT (python-jose, passlib bcrypt) |
+| **Computer Vision** | OpenCV (Headless), Ultralytics YOLOv8, ONNX Runtime (CPU) |
+| **OCR Engines** | PyTesseract, EasyOCR |
+| **Frontend** | HTML5, Vanilla CSS3 (Dark Slate Theme), Modern ES6 JavaScript, Chart.js |
+| **Testing** | Pytest, FastAPI TestClient |
 
 ---
 
-## 📁 Project Folder Structure
+## 🧠 Real Machine Learning Models & Licenses
 
-```
-trafficeye-ai/
-├── frontend/                     # Interactive Web Application UI
-│   ├── css/style.css            # Dark slate government design theme
-│   ├── js/
-│   │   ├── api.js               # REST API client library
-│   │   └── app.js               # Dashboard & Review workflow logic
-│   ├── images/samples/          # Baseline test images
-│   └── index.html               # Main dashboard & portal layout
-│
-├── backend/                      # Python FastAPI Application Server
-│   ├── app/
-│   │   ├── main.py              # FastAPI app setup & static file mounts
-│   │   ├── config.py            # Pydantic BaseSettings
-│   │   ├── database.py          # SQLAlchemy database engine
-│   │   ├── models/models.py     # User, Violation, Vehicle, Challan DB models
-│   │   ├── schemas/schemas.py   # Pydantic API response schemas
-│   │   ├── routes/              # Auth, Detections, Violations, Challans, Analytics
-│   │   └── services/            # Detection orchestrator service
-│   ├── requirements.txt         # Dependencies
-│   └── tests/                   # Pytest automated test suite
-│
-├── ai/                           # AI & Computer Vision Subsystem
-│   ├── detection/yolo_service.py # YOLO inference wrapper
-│   ├── ocr/plate_ocr.py         # OpenCV & License Plate OCR engine
-│   ├── violation_engine/rules.py # Rule-based heuristic violation checks
-│   └── utils/                   # OpenCV geometry helper functions
-│
-├── datasets/                     # Dataset acquisition & training documentation
-│   └── README.md
-├── models/                       # YOLO model weights (.pt / .onnx)
-├── uploads/                      # Uploaded traffic snapshots & MP4 videos
-├── evidence/                     # Generated evidence images & plate crops
-├── docker-compose.yml            # Docker multi-container setup
-├── .env.example                  # Environment configuration template
-├── .gitignore
-└── README.md
-```
+All inference in TrafficEye AI runs on verified open-source models with verified SHA-256 integrity:
+
+| Task | Model Source | Format | License | Location | SHA-256 Hash |
+|---|---|---|---|---|---|
+| **Base Vehicle / Person** | `ultralytics/yolov8n.pt` | PyTorch | AGPL-3.0 | Auto-cached | Official Ultralytics Weights |
+| **License Plate Detection** | `ml-debi/yolov8-license-plate-detection` | ONNX | MIT | `models/plate/best.onnx` | `85d236280a1301ad98907947d284951dd2b20c23a6786ff50f7e6a8ec515bd50` |
+| **Helmet Detection** | `iam-tsr/yolov8n-helmet-detection` | ONNX | MIT | `models/helmet/best.onnx` | `c692f7e08cf289fff0e0e9f2fe9131709bb8f6cbee15b51f80c06af5d4e32c76` |
+
+Helper scripts to download/verify models:
+- License Plate Model: `python download_model.py`
+- Helmet Model: `python download_helmet_model.py` & `python export_helmet_onnx.py`
 
 ---
 
-## 🚀 Installation & Local Execution
+## 🔄 Workflows
+
+### Image Analysis Workflow (`POST /api/analyze/image`)
+1. User uploads image (`.jpg`, `.png`, `.webp`, `.bmp`).
+2. Input validation verifies extension, size (<=15 MB), and filename safety.
+3. Base YOLO detects vehicles and occupants.
+4. Helmet ONNX model analyzes head/occupant regions for helmet wear.
+5. Violation Engine evaluates rules (No Helmet, Triple Riding).
+6. Plate ONNX model scans vehicle ROIs and crops detected plates.
+7. OCR normalizes registration string or flags `NOT_DETECTED` / `UNREADABLE`.
+8. Result stored in database and rendered in frontend with exact bounding boxes.
+
+### Video Analysis Workflow (`POST /api/analyze/video`)
+1. User uploads video (`.mp4`, `.avi`, `.mov`, `.mkv`).
+2. File validated for allowed video extensions and size (<=100 MB).
+3. OpenCV samples frames at user-specified interval (default: 1 frame every 15 frames).
+4. For sampled frames, runs YOLO + helmet + plate detection pipeline.
+5. `VehicleTracker` associates detections across frames using IoU tracking.
+6. Multi-frame violations deduplicated per vehicle track ID.
+7. Summary returned: processed frames count, total vehicles tracked, tracks list, deduplicated violations.
+
+---
+
+## 🚀 Installation & Setup
 
 ### 1. Prerequisites
 - Python 3.11+
-- Git
+- Tesseract OCR installed on host system (if utilizing Tesseract engine)
 
-### 2. Quick Setup
-
+### 2. Clone & Install Dependencies
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/trafficeye-ai7/trafficeye-ai.git
 cd trafficeye-ai
 
-# Checkout feature branch
-git checkout feature/real-world-trafficeye
-
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
 
-# Install dependencies
+# Install backend dependencies
 pip install -r backend/requirements.txt
-pip install email-validator
 ```
 
-### 3. Environment Setup
-Copy `.env.example` to `.env`:
+### 3. Model Verification
+Ensure verified ONNX models are present in their designated folders:
 ```bash
-cp .env.example .env
+# Download and verify plate detection model
+python download_model.py
+
+# Download and export helmet detection model
+python download_helmet_model.py
+python export_helmet_onnx.py
 ```
 
 ### 4. Running the Backend Server
 ```bash
 python -m uvicorn backend.app.main:app --reload --port 8000
 ```
-- **API Swagger Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- API Documentation (Swagger): [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-### 5. Running the Frontend Portal
-Simply open `frontend/index.html` in any web browser, or access [http://127.0.0.1:8000](http://127.0.0.1:8000) directly while the backend server is running!
+### 5. Running the Frontend
+The FastAPI backend serves the frontend static files at root:
+- Access [http://127.0.0.1:8000](http://127.0.0.1:8000) directly in your browser.
+- Alternatively, open `frontend/index.html` via any modern web browser or local HTTP server.
+
+Default officer login credentials for review testing:
+- **Admin**: `admin` / `admin123`
+- **Operator**: `operator` / `operator123`
 
 ---
 
-## 🧪 Running Automated Tests
+## 🔌 API Endpoints Reference
 
-Run the full Pytest integration test suite:
+### Authentication
+- `POST /api/auth/login`: Authenticate officer and receive JWT access token.
+- `GET /api/auth/me`: Retrieve current logged-in officer profile.
+
+### AI Detection & Analysis
+- `POST /api/analyze/image`: Upload image or specify sample tag for multi-model violation analysis.
+- `POST /api/analyze/video`: Upload traffic video for sampled frame analysis and vehicle tracking.
+- `GET /api/detections`: List recent detection sessions.
+- `GET /api/detections/{id}`: Retrieve detailed detection session by ID.
+
+### Violation Review System
+- `GET /api/violations`: Query violations with optional status (`PENDING_REVIEW`, `CONFIRMED`, `REJECTED`) and type filters.
+- `GET /api/violations/{id}`: Retrieve individual violation details and evidence links.
+- `POST /api/violations/{id}/confirm`: Confirm violation and generate citation in ledger.
+- `POST /api/violations/{id}/reject`: Reject violation with optional reason.
+
+### E-Challan Ledger [DEMO]
+- `GET /api/challans`: Query generated citations by status or vehicle registration.
+- `GET /api/challans/{id}`: Retrieve citation details.
+- `POST /api/challans`: Issue manual citation.
+- `POST /api/challans/{id}/pay`: Settle citation in demo ledger.
+
+### Municipal Analytics Dashboard
+- `GET /api/dashboard/metrics`: Real aggregate counts (today's violations, pending reviews, active cases, category distribution, hourly timeline).
+
+---
+
+## 🧪 Automated Testing
+
+Run the comprehensive Pytest suite:
 ```bash
-python -m pytest backend/tests/
+python -m pytest -v
 ```
 
-Expected output:
-```
-======================== 8 passed in 3.58s ========================
-```
+**Test Suite Coverage (22 passed tests):**
+- `backend/tests/test_api.py`: Health check, metrics, violations query, and image analysis endpoints.
+- `backend/tests/test_helmet_detection.py`: Model SHA-256 integrity, runtime inference, empty image handling, rule engine with real helmet detections.
+- `backend/tests/test_plate_detection.py`: License plate localization, empty image handling, OCR integration without fake fallbacks.
+- `backend/tests/test_ocr.py`: Indian registration plate regex normalization and character correction.
+- `backend/tests/test_video_processing.py`: IoU bounding box calculations, multi-frame vehicle tracking association, video endpoint frame processing.
+- `backend/tests/test_violation_engine.py`: Triple riding association (single rider, 2 riders, 3+ riders, separate motorcycles isolation).
 
 ---
 
-## 🐳 Docker Deployment
+## ⚠️ Known Limitations
 
-To launch the full backend and frontend with Docker:
-```bash
-docker-compose up --build -d
-```
-
----
-
-## 📊 Performance Benchmarks
-
-| Component | Hardware / Engine | Execution Time |
-|---|---|---|
-| **YOLO Image Inference** | CPU (Intel i7) / `yolov8n.pt` | ~45ms / image |
-| **Plate Preprocessing & OCR** | OpenCV + EasyOCR / PyTesseract | ~120ms / crop |
-| **API End-to-End Latency** | FastAPI Ingestion -> DB Save | ~180ms total |
-
----
-
-## ⚖️ Implementation Status & Limitations
-
-### Implemented & Tested
-- [x] Real YOLO object detection pipeline for vehicles, riders, and signals.
-- [x] OpenCV license plate cropping, preprocessing, and OCR normalization.
-- [x] Heuristic violation engines for no-helmet, triple-riding, parking zone, and signal violations.
-- [x] Persistent SQLAlchemy database with SQLite/PostgreSQL support.
-- [x] Full REST API layer (FastAPI) for detection, review workflow, and e-challan ledger.
-- [x] Modernized interactive web frontend connected live to REST backend.
-
-### Experimental / Limitations
-- **Camera Angles & Occlusion**: Dense traffic crowding or severe low-resolution CCTV feeds can obscure license plates or overlap helmet detections.
-- **Red-Light ROI Calibration**: Requires camera-specific calibration for stop-line coordinates.
-
----
-
-## 🔒 Ethical & Real-World Considerations
-
-1. **Research & Engineering Prototype**: This system is designed as an academic and portfolio engineering prototype, not as an autonomous government citation engine.
-2. **Human-in-the-Loop Requirement**: Automated computer vision detections serve only as candidate flags. Final enforcement requires manual verification by a certified traffic operator.
-3. **Privacy Controls**: No real citizen personal data or government vehicle registry APIs are connected. All names, vehicle registrations, and phone numbers are generated mock data.
+1. **Simulated External Services**:
+   - VAHAN / Parivahan vehicle registration lookups are simulated for demonstration purposes.
+   - Payment settlements and SMS notifications are simulated within the prototype and marked `[DEMO]`.
+2. **Camera Angles & Severe Occlusion**:
+   - Dense bumper-to-bumper occlusion or steep top-down CCTV camera angles can obstruct license plate visibility or rider heads.
+3. **Hardware Acceleration**:
+   - Models run on CPU by default via ONNX Runtime and PyTorch. For high-throughput production CCTV stream processing, GPU hardware acceleration (CUDA/TensorRT) is recommended.
+4. **Static Geometric Zones**:
+   - Signal jumping and wrong parking detection rely on camera calibration and defined ROI polygon coordinates.
 
 ---
 
 ## 📝 License
 
-This project is open-source under the [MIT License](LICENSE).
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
