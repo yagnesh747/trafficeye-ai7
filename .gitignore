@@ -41,8 +41,10 @@ htmlcov/
 *.sqlite3
 
 # Model Weights (downloaded dynamically)
-models/*.pt
-models/*.onnx
+*.pt
+*.onnx
+models/**/*.pt
+models/**/*.onnx
 models/*.engine
 models/*.bin
 yolov8*.pt

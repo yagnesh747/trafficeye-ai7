@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
     # Database
-    DATABASE_URL: str = "sqlite:///./trafficeye.db"
+    DATABASE_URL: str = "sqlite:////tmp/trafficeye.db" if os.environ.get("VERCEL") else "sqlite:///./trafficeye.db"
 
     # Inference & Vision
     MODEL_PATH: str = "models/yolov8n.pt"
@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     OCR_ENGINE: str = "easyocr"  # easyocr or pytesseract
     OCR_CONFIDENCE_THRESHOLD: float = 0.60
 
-    # Storage
-    UPLOAD_DIRECTORY: str = "uploads"
-    EVIDENCE_DIRECTORY: str = "evidence"
+    # Storage (use /tmp on Vercel where root FS is read-only)
+    UPLOAD_DIRECTORY: str = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+    EVIDENCE_DIRECTORY: str = "/tmp/evidence" if os.environ.get("VERCEL") else "evidence"
     MAX_UPLOAD_SIZE_MB: int = 50
 
     # Fine Schedule (INR ₹)
