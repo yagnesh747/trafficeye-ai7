@@ -62,7 +62,10 @@ def health_check():
 # Mount the frontend LAST so all API routes take priority.
 # html=True makes StaticFiles serve index.html for / automatically.
 # Relative paths (css/style.css, js/app.js) in the HTML will resolve correctly.
-if os.path.exists("frontend"):
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend")
+if os.path.isdir(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+elif os.path.isdir("frontend"):
     app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 

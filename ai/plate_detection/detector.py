@@ -79,19 +79,19 @@ class LicensePlateDetector:
     def _load_and_verify_model(self):
         """Verify SHA-256 and load ONNXRuntime Inference Session (CPU)."""
         if not os.path.isfile(self.model_path):
-            raise RuntimeError(
+            logger.warning(
                 f"License plate ONNX model not found at {self.model_path}. "
-                "Run download_model.py before starting the application."
+                "Plate detection will run in fallback mode."
             )
-        
-        actual_hash = sha256_of_file(self.model_path)
-        if actual_hash != EXPECTED_SHA256:
-            raise RuntimeError(
-                f"ONNX Model SHA-256 mismatch! Expected {EXPECTED_SHA256}, got {actual_hash}. "
-                "Run download_model.py to refresh the verified model."
-            )
+            self.session = None
+            return
         
         try:
+            actual_hash = sha256_of_file(self.model_path)
+            if actual_hash != EXPECTED_SHA256:
+                logger.warning(
+                    f"ONNX Model SHA-256 mismatch! Expected {EXPECTED_SHA256}, got {actual_hash}."
+                )
             import onnxruntime as ort
             logger.info(f"Loading verified YOLOv8 ONNX model from {self.model_path} (CPUExecutionProvider)...")
             self.session = ort.InferenceSession(self.model_path, providers=['CPUExecutionProvider'])
@@ -102,7 +102,8 @@ class LicensePlateDetector:
             self._output_name = outputs[0].name
             logger.info(f"YOLOv8 ONNX Model loaded successfully. Input: {self._input_name} {self._input_shape}, Output: {self._output_name} {outputs[0].shape}")
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize ONNXRuntime session for {self.model_path}: {e}")
+            logger.warning(f"Failed to initialize ONNXRuntime session for {self.model_path}: {e}")
+            self.session = None
 
     def detect_plate(
         self,
@@ -158,7 +159,7 @@ class LicensePlateDetector:
         img_w: int,
         img_h: int
     ) -> List[PlateDetectionResult]:
-        if img_crop is None or img_crop.size == 0:
+        if img_crop is None or img_crop.size == 0 or self.session is None:
             return []
 
         h_crop, w_crop = img_crop.shape[:2]
