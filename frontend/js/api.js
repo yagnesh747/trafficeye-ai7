@@ -1,8 +1,25 @@
 // TrafficEye AI — REST API Client
 
-const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-    ? 'http://127.0.0.1:8000/api'
-    : '/api';
+const API_BASE_URL = (() => {
+    if (window.TRAFFICEYE_API_URL) return window.TRAFFICEYE_API_URL;
+    const stored = localStorage.getItem('trafficeye_api_url');
+    if (stored) return stored;
+
+    const origin = window.location.origin || '';
+    const protocol = window.location.protocol || '';
+
+    if (protocol === 'file:' || origin === 'null' || !origin) {
+        return 'http://127.0.0.1:8000/api';
+    }
+
+    if (origin.includes('localhost:') || origin.includes('127.0.0.1:')) {
+        if (!origin.includes(':8000')) {
+            return 'http://127.0.0.1:8000/api';
+        }
+    }
+
+    return '/api';
+})();
 
 class TrafficEyeAPI {
     static async getDashboardMetrics() {

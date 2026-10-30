@@ -1,8 +1,9 @@
 import os
 import logging
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.app.config import settings
@@ -20,60 +21,10 @@ logger = logging.getLogger("trafficeye.main")
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    description="TrafficEye AI — AI-Powered Traffic Violation Detection, License Plate Recognition and E-Challan Management System"
-)
-
-# CORS middleware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include API Routers
-app.include_router(auth_router, prefix=settings.API_V1_STR)
-app.include_router(detections_router, prefix=settings.API_V1_STR)
-app.include_router(violations_router, prefix=settings.API_V1_STR)
-app.include_router(challans_router, prefix=settings.API_V1_STR)
-app.include_router(analytics_router, prefix=settings.API_V1_STR)
-
-# Ensure directories exist
-os.makedirs(settings.UPLOAD_DIRECTORY, exist_ok=True)
-os.makedirs(settings.EVIDENCE_DIRECTORY, exist_ok=True)
-
-# Mount uploads and evidence as static directories
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIRECTORY), name="uploads")
-app.mount("/evidence", StaticFiles(directory=settings.EVIDENCE_DIRECTORY), name="evidence")
-
-@app.get("/health")
-def health_check():
-    return {
-        "status": "online",
-        "system": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT
-    }
-
-# Mount the frontend LAST so all API routes take priority.
-# html=True makes StaticFiles serve index.html for / automatically.
-# Relative paths (css/style.css, js/app.js) in the HTML will resolve correctly.
-frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend")
-if os.path.isdir(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-elif os.path.isdir("frontend"):
-    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-
-@app.on_event("startup")
-def startup_db_seed():
+def seed_default_users():
+    """Seed default Admin and Operator accounts if none exist in the database."""
     db = SessionLocal()
     try:
-        # Seed default Admin and Operator accounts if none exist
         admin = db.query(User).filter(User.username == "admin").first()
         if not admin:
             logger.info("Seeding default admin user (admin / admin123)...")
@@ -104,3 +55,90 @@ def startup_db_seed():
         db.rollback()
     finally:
         db.close()
+
+# Seed immediately on load so serverless functions are pre-seeded
+try:
+    seed_default_users()
+except Exception as e:
+    logger.warning(f"Initial seed execution check: {e}")
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description="TrafficEye AI — AI-Powered Traffic Violation Detection, License Plate Recognition and E-Challan Management System"
+)
+
+# CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API Routers
+app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(detections_router, prefix=settings.API_V1_STR)
+app.include_router(violations_router, prefix=settings.API_V1_STR)
+app.include_router(challans_router, prefix=settings.API_V1_STR)
+app.include_router(analytics_router, prefix=settings.API_V1_STR)
+
+# Ensure directories exist
+os.makedirs(settings.UPLOAD_DIRECTORY, exist_ok=True)
+os.makedirs(settings.EVIDENCE_DIRECTORY, exist_ok=True)
+
+# Health check endpoints
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "online",
+        "system": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT
+    }
+
+# Dedicated multi-tier file resolution endpoints (prevents 404s on Vercel)
+@app.get("/evidence/{file_path:path}")
+def get_evidence_file(file_path: str):
+    # 1. Primary writeable directory (/tmp/evidence on Vercel)
+    p1 = os.path.join(settings.EVIDENCE_DIRECTORY, file_path)
+    if os.path.isfile(p1):
+        return FileResponse(p1)
+    # 2. Repository pre-seeded evidence directory
+    p2 = os.path.join(settings.BASE_DIR, "evidence", file_path)
+    if os.path.isfile(p2):
+        return FileResponse(p2)
+    # 3. Sample image directory fallback
+    p3 = os.path.join(settings.SAMPLES_DIR, file_path)
+    if os.path.isfile(p3):
+        return FileResponse(p3)
+    # 4. Universal fallback sample
+    fallback = os.path.join(settings.SAMPLES_DIR, "no_helmet.png")
+    if os.path.isfile(fallback):
+        return FileResponse(fallback)
+    raise HTTPException(status_code=404, detail="Evidence image not found")
+
+@app.get("/uploads/{file_path:path}")
+def get_upload_file(file_path: str):
+    p1 = os.path.join(settings.UPLOAD_DIRECTORY, file_path)
+    if os.path.isfile(p1):
+        return FileResponse(p1)
+    p2 = os.path.join(settings.BASE_DIR, "uploads", file_path)
+    if os.path.isfile(p2):
+        return FileResponse(p2)
+    fallback = os.path.join(settings.SAMPLES_DIR, "no_helmet.png")
+    if os.path.isfile(fallback):
+        return FileResponse(fallback)
+    raise HTTPException(status_code=404, detail="Upload file not found")
+
+# Mount static directories
+if os.path.isdir(settings.FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=settings.FRONTEND_DIR, html=True), name="frontend")
+elif os.path.isdir("frontend"):
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+@app.on_event("startup")
+def startup_db_seed():
+    seed_default_users()

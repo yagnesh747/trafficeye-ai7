@@ -567,7 +567,7 @@ function buildDetectionDataFromAPI(apiResult) {
         apiViolations: rawViolations,
         mediaPath: apiResult.media_path,
         annotatedImagePath: apiResult.annotated_image_path,
-        evidenceImage: apiResult.annotated_image_path || apiResult.media_path,
+        evidenceImage: apiResult.annotated_image_base64 || apiResult.annotated_image_path || apiResult.media_path,
         processingTimeMs: apiResult.processing_time_ms
     };
 }
@@ -1148,6 +1148,9 @@ function openChallanModal(data, totalFine) {
 
     const modalImg = document.getElementById('mSnapshotImg');
     if (modalImg) {
+        modalImg.onerror = () => {
+            modalImg.src = 'images/samples/no_helmet.png';
+        };
         modalImg.src = existing.evidenceImage || (state.activeDetectionKey ? sampleCards[state.activeDetectionKey]?.imagePath : '') || (state.lastInferenceData?.evidenceImage || 'images/samples/no_helmet.png');
     }
 
@@ -1226,6 +1229,7 @@ async function renderChallanLedger() {
                 state.challans.forEach(local => {
                     if (!challansToRender.find(b => b.id === local.id)) challansToRender.push(local);
                 });
+                state.challans = challansToRender;
             }
         } catch (_) {}
     }

@@ -135,6 +135,7 @@ class ImageAnalysisResponse(BaseModel):
     detection_uuid: str
     media_path: str
     annotated_image_path: str
+    annotated_image_base64: Optional[str] = None
     detections: List[DetectionItem]
     violations: List[ViolationCandidate]
     processing_time_ms: float

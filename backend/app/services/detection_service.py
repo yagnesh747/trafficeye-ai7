@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import time
+import base64
 import cv2
 import numpy as np
 from datetime import datetime
@@ -208,10 +209,19 @@ def process_image_file(db: Session, image_bytes: bytes, filename: str, sample_ta
     db.commit()
     elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
 
+    # Encode annotated image as base64 for instant, serverless-safe browser rendering
+    annotated_base64 = None
+    try:
+        _, buf = cv2.imencode(".jpg", annotated_img)
+        annotated_base64 = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('utf-8')}"
+    except Exception as e:
+        logger.warning(f"Failed to generate base64 for annotated image: {e}")
+
     return {
         "detection_uuid": detection_uuid,
         "media_path": f"uploads/{upload_filename}",
         "annotated_image_path": f"evidence/{annotated_filename}",
+        "annotated_image_base64": annotated_base64,
         "detections": [d.to_dict() for d in raw_detections],
         "helmet_detections": [hd.to_dict() for hd in helmet_detections],
         "violations": violations_output,

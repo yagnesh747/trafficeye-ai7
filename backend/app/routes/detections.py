@@ -6,6 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.orm import Session
 
+from backend.app.config import settings
 from backend.app.database import get_db
 from backend.app.models.models import Detection
 from backend.app.services.detection_service import process_image_file, process_video_file
@@ -36,9 +37,9 @@ async def analyze_image(
         if sample_tag not in ALLOWED_SAMPLE_TAGS:
             raise HTTPException(status_code=400, detail="Invalid sample_tag specified.")
 
-        sample_path = os.path.join("frontend", "images", "samples", f"{sample_tag}.png")
+        sample_path = os.path.join(settings.SAMPLES_DIR, f"{sample_tag}.png")
         if not os.path.exists(sample_path):
-            sample_path = os.path.join("frontend", "images", "samples", "no_helmet.png")
+            sample_path = os.path.join(settings.SAMPLES_DIR, "no_helmet.png")
 
         if not os.path.exists(sample_path):
             raise HTTPException(status_code=404, detail="Sample image asset not found.")

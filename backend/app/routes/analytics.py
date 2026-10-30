@@ -51,7 +51,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
             hourly[ts.hour] += 1
 
     return {
-        "violations_detected_today": int(violations_detected_today),
+        "violations_detected_today": int(display_today_count),
         "pending_reviews": int(pending_reviews),
         "confirmed_violations": int(confirmed_violations),
         "challans_generated": int(challans_generated),
